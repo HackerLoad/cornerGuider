@@ -14,24 +14,29 @@ Drin:
 - Der Straße ~500 m voraus folgen, bis zur ersten Kreuzung
 - Auf dem vorhergesagten Pfad die vorhandene Kurvenerkennung (`detectCurves`) laufen lassen
 - Messen, wie nah das an den Kurven ist, die man tatsächlich fährt
+- Ein **Versuchs-Screen in der App** („Freifahrt (Versuch)"), der live den vorhergesagten Pfad und die Kurven zeigt, die Fahrt aufzeichnet und sich hinterher selbst auswertet
 
 Nicht drin:
 - Kreuzungslogik (Abbiegen, Kreisverkehre, Vorhersage über Kreuzungen hinweg)
 - Offline-Regionspakete
-- Eigene UI, Sprachansagen für Freifahrt, Hintergrundbetrieb
+- Sprachansagen für Freifahrt, Hintergrundbetrieb
 
 Beim Pfadende an einer Kreuzung gibt es „keine weitere Vorhersage" und keine Ansage darüber hinaus.
 
-## Messmethode (zuerst, ohne Gerät)
+## Messmethode (in der App, ohne vorhandene Aufzeichnungen)
 
-Die vorhandenen GPX-Tracks (`test/fixtures/stelvio.gpx`, `amalfi-coast.gpx`) dienen als **Wahrheit**, weil sie die tatsächlich gefahrene Strecke sind:
+Es gibt keine eigenen Aufzeichnungen und der Versuch läuft nicht als Skript. Die „Wahrheit" entsteht deshalb **während des Versuchs selbst**:
 
-1. Aus dem Track werden Kurven berechnet (Referenz, wie heute).
-2. Ein simulierter Fahrer fährt den Track ab (`SimulatedLocationSource`, optional mit GPS-Rauschen).
-3. An vielen Punkten des Tracks wird nur mit Position und Kurs per OSM-Pfad vorhergesagt.
-4. Vorhergesagte Kurven im Horizont (z. B. 400 m) werden mit den Referenzkurven verglichen.
+1. Der Versuchs-Screen nutzt die normale Positionsquelle (echtes GPS oder die Simulation) und sagt laufend den Pfad voraus. Jede Vorhersage wird mit Zeitpunkt gespeichert (Position, Pfad, vorhergesagte Kurven).
+2. Gleichzeitig wird die tatsächlich gefahrene Spur aufgezeichnet.
+3. Nach der Fahrt berechnet die App aus der **gefahrenen Spur** mit `detectCurves` die tatsächlichen Kurven und vergleicht sie mit den gespeicherten Vorhersagen. Die Kennzahlen erscheinen als Ergebnisseite in der App.
+4. Optional lässt sich die Fahrt als GPX exportieren, dann lässt sie sich später wiederverwenden.
 
-Overpass-Antworten werden einmal als JSON gespeichert (`test/fixtures/overpass-*.json`). Alle Tests und die Auswertung laufen danach **offline und deterministisch**.
+Entwickeln und Testen ohne Motorrad:
+
+- Die Simulation fährt die vorhandenen Fixtures (`stelvio.gpx`, `amalfi-coast.gpx`) ab und dient als Testfahrt für die Pipeline und die Auswertung.
+- Die Overpass-Antworten dieser Strecken werden einmal als JSON gespeichert (`test/fixtures/overpass-*.json`), damit Jest-Tests für Graph, Matching und Vorhersage offline und deterministisch laufen. Das sind nur Unit-Tests der Bausteine, keine Auswertung.
+- Aussagekräftig ist erst die Fahrt mit echtem GPS auf echten Straßen. Die Simulation prüft nur, ob die Technik läuft, nicht wie gut die Vorhersage in der Praxis ist.
 
 ### Kennzahlen
 
@@ -63,8 +68,12 @@ Die Zahlen sind Startwerte und gemeinsam zu bestätigen.
 3. **Map-Matching** (`mapMatch.ts`): nächstes Segment innerhalb ~25 m, dessen Richtung zum Fahrtkurs passt (< ~45°). Hysterese, damit die Zuordnung nicht flackert. Dafür braucht `Fix` zusätzlich `heading`.
 4. **Pfadvorhersage** (`predictPath.ts`): der Straße in Fahrtrichtung folgen bis Horizont oder Kreuzung; Pfad zurückgeben mit Kennzeichnung, *warum* er endet (Horizont, Kreuzung, Datenende).
 5. **Kurven auf dem Pfad**: `detectCurves` auf dem vorhergesagten Pfad, Ergebnis relativ zur aktuellen Position.
-6. **Auswertung** (`scripts/freeride-eval.ts`): Messmethode oben, Ausgabe der Kennzahlen als Tabelle.
-7. **Bericht**: Ergebnis und Go/No-Go-Entscheidung kurz in diese Datei schreiben.
+6. **Versuchs-Screen und Aufzeichnung** (`app/freeride.tsx`, `src/freeride/trace.ts`)
+   - Zeigt Straße voraus, vorhergesagte Kurven (Kurvengrafik und Liste wie im Fahrmodus) und den Grund, wenn der Pfad endet („Kreuzung", „Daten werden geladen")
+   - Zeichnet Spur und Vorhersagen lokal auf, Start/Stopp per Knopf
+   - Quellenangabe „© OpenStreetMap-Mitwirkende" sichtbar
+7. **Selbstauswertung** (`src/freeride/evaluate.ts`, reines TS, plus Ergebnisseite): vergleicht gespeicherte Vorhersagen mit den Kurven der gefahrenen Spur und berechnet die Kennzahlen. Per Jest mit der simulierten Fahrt getestet.
+8. **Bericht**: Ergebnis und Go/No-Go-Entscheidung kurz in diese Datei schreiben.
 
 Tests pro Schritt mit synthetischen Straßennetzen (Gerade, Kurve, Gabelung) plus den gespeicherten Overpass-Fixtures.
 
@@ -73,7 +82,8 @@ Tests pro Schritt mit synthetischen Straßennetzen (Gerade, Kurve, Gabelung) plu
 - Kurvenerkennung: `src/curves/detect.ts`
 - Projektion, Resampling, Snapping: `src/geo/*`
 - Simulation: `src/drive/simulator.ts`
-- Tracks als Wahrheit: `test/fixtures/*.gpx`
+- Testfahrt für die Simulation: `test/fixtures/*.gpx`
+- Positionsquellen, Tracker-Anbindung und Fahrmodus-Komponenten (`CurveGraphic`) aus `src/drive/*` und `src/components/*`
 
 ## Risiken und offene Punkte
 
@@ -83,6 +93,10 @@ Tests pro Schritt mit synthetischen Straßennetzen (Gerade, Kurve, Gabelung) plu
 - **Lizenz:** Quellenangabe „© OpenStreetMap-Mitwirkende" (ODbL) muss in jeder späteren App-Version sichtbar sein.
 - **Sicherheit:** Auch bei guten Kennzahlen darf die Freifahrt nur mit klarer Kennzeichnung „vorhergesagt, nicht geplant" ausgeliefert werden; an unsicheren Stellen wird geschwiegen.
 
-Offene Fragen an dich:
-- Welche Strecken kennst du gut und könnten als zusätzliche Wahrheit dienen (eigene GPX-Aufzeichnung)?
-- Soll der Versuch zuerst nur im Skript laufen (empfohlen) oder gleich auf dem Gerät?
+Entschieden:
+- Keine vorhandenen Aufzeichnungen nötig, die Fahrt zeichnet sich selbst auf.
+- Der Versuch läuft in der App, nicht als Skript.
+
+Noch offen:
+- Auf welcher Strecke willst du die erste echte Testfahrt machen? Sinnvoll wäre eine Landstraße mit mehreren Kurven und möglichst wenigen Kreuzungen.
+- Wer fährt: Wenn du selbst fährst, muss der Versuchs-Screen ohne Bedienung während der Fahrt laufen. Alternativ als Beifahrer oder im Auto testen, das ist für die Kennzahlen unkritisch.
