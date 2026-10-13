@@ -70,6 +70,12 @@ export default function RouteOverview() {
             >
               <Text style={styles.buttonText}>Fahrt starten</Text>
             </Pressable>
+            <Pressable
+              style={[styles.button, styles.secondary]}
+              onPress={() => router.push({ pathname: '/drive/[id]', params: { id: route.id, sim: '1' } })}
+            >
+              <Text style={[styles.buttonText, { color: colors.accent }]}>Simulation starten</Text>
+            </Pressable>
           </View>
         }
         renderItem={({ item }) => <CurveRow curve={item} />}
@@ -90,6 +96,7 @@ const styles = StyleSheet.create({
   summary: { color: colors.text, fontSize: 20, fontWeight: '700' },
   warning: { color: colors.warn, fontSize: 14, marginTop: 8, lineHeight: 20 },
   button: { backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginTop: 14 },
+  secondary: { backgroundColor: colors.card, marginTop: 8 },
   buttonText: { color: '#000', fontSize: 17, fontWeight: '800' },
   delete: { color: colors.danger, textAlign: 'center', fontSize: 16 },
 });

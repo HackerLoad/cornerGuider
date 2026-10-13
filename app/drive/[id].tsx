@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { CurveGraphic } from '../../src/components/CurveGraphic';
 import { DriveSession, type DriveSnapshot } from '../../src/drive/driveSession';
+import { SimulatedLocationSource } from '../../src/drive/simulator';
 import { directionLabel, formatDistance } from '../../src/format';
 import type { StoredRoute } from '../../src/routes/model';
 import { configureAudioSession } from '../../src/services/audioSession';
@@ -13,9 +14,21 @@ import { speak, stopSpeaking } from '../../src/services/speech';
 import { currentDriveSettings } from '../../src/stores/settingsStore';
 import { colors } from '../../src/theme';
 
+function SimBtn({ label, onPress }: { label: string; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={styles.simBtn}>
+      <Text style={styles.simBtnText}>{label}</Text>
+    </Pressable>
+  );
+}
+
 export default function DriveScreen() {
   useKeepAwake();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, sim: simParam } = useLocalSearchParams<{ id: string; sim?: string }>();
+  const isSim = simParam === '1';
+  const [sim, setSim] = useState<SimulatedLocationSource | null>(null);
+  const [, setSimTick] = useState(0); // erzwingt Neuzeichnen nach Änderungen am Simulator
+  const [offsetOn, setOffsetOn] = useState(false);
   const { width, height } = useWindowDimensions();
   const [route, setRoute] = useState<StoredRoute | null | undefined>(undefined);
   const [snap, setSnap] = useState<DriveSnapshot | null>(null);
@@ -32,9 +45,17 @@ export default function DriveScreen() {
       if (!r) return;
       try {
         await configureAudioSession();
+        let source: DeviceLocationSource | SimulatedLocationSource;
+        if (isSim) {
+          const simSource = new SimulatedLocationSource(r, { speedKmh: 60 });
+          setSim(simSource);
+          source = simSource;
+        } else {
+          source = new DeviceLocationSource();
+        }
         session = new DriveSession({
           route: r,
-          source: new DeviceLocationSource(),
+          source,
           speak: (t) => speak(t, currentDriveSettings().speechRate),
           getSettings: currentDriveSettings,
         });
@@ -50,7 +71,7 @@ export default function DriveScreen() {
       stopSpeaking();
       void session?.stop();
     };
-  }, [id]);
+  }, [id, isSim]);
 
   const confirmStop = () =>
     Alert.alert('Fahrt beenden?', undefined, [
@@ -110,6 +131,22 @@ export default function DriveScreen() {
         ))}
       </ScrollView>
 
+      {sim ? (
+        <View style={styles.simBar}>
+          <Text style={styles.simLabel}>SIMULATION {Math.round(sim.speedKmh)} km/h</Text>
+          <View style={styles.simRow}>
+            <SimBtn label="−10" onPress={() => { sim.setSpeedKmh(sim.speedKmh - 10); setSimTick((n) => n + 1); }} />
+            <SimBtn label="+10" onPress={() => { sim.setSpeedKmh(sim.speedKmh + 10); setSimTick((n) => n + 1); }} />
+            <SimBtn label={sim.isPaused ? 'Weiter' : 'Pause'} onPress={() => { sim.setPaused(!sim.isPaused); setSimTick((n) => n + 1); }} />
+            <SimBtn label="+500 m" onPress={() => sim.jump(500)} />
+            <SimBtn
+              label={offsetOn ? 'Zurück' : 'Abweichen'}
+              onPress={() => { sim.setSideOffset(offsetOn ? 0 : 120); setOffsetOn(!offsetOn); }}
+            />
+          </View>
+        </View>
+      ) : null}
+
       <View style={styles.footer}>
         <Text style={styles.footerText}>
           {snap ? `${Math.round(snap.speed * 3.6)} km/h · Rest ${formatDistance(snap.remaining)}` : ''}
@@ -135,5 +172,10 @@ const styles = StyleSheet.create({
   footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, paddingBottom: 28 },
   footerText: { color: colors.muted, fontSize: 18 },
   stop: { backgroundColor: colors.card, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 18 },
+  simBar: { paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#1a1400', gap: 6 },
+  simLabel: { color: colors.accent, fontSize: 14, fontWeight: '800' },
+  simRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  simBtn: { backgroundColor: colors.border, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 12 },
+  simBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   stopText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });
