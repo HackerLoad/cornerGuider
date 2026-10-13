@@ -13,6 +13,25 @@ const config: ExpoConfig = {
     supportsTablet: false,
     infoPlist: {
       UIBackgroundModes: ['location', 'audio'],
+      LSSupportsOpeningDocumentsInPlace: false,
+      CFBundleDocumentTypes: [
+        {
+          CFBundleTypeName: 'GPX',
+          LSHandlerRank: 'Alternate',
+          LSItemContentTypes: ['com.topografix.gpx'],
+        },
+      ],
+      UTImportedTypeDeclarations: [
+        {
+          UTTypeIdentifier: 'com.topografix.gpx',
+          UTTypeDescription: 'GPS Exchange Format',
+          UTTypeConformsTo: ['public.xml'],
+          UTTypeTagSpecification: {
+            'public.filename-extension': ['gpx'],
+            'public.mime-type': ['application/gpx+xml'],
+          },
+        },
+      ],
       NSLocationWhenInUseUsageDescription:
         'cornerGuider braucht deinen Standort, um die nächste Kurve auf der Route anzuzeigen.',
       NSLocationAlwaysAndWhenInUseUsageDescription:
@@ -27,6 +46,19 @@ const config: ExpoConfig = {
       backgroundImage: './assets/android-icon-background.png',
       monochromeImage: './assets/android-icon-monochrome.png',
     },
+    intentFilters: [
+      {
+        action: 'VIEW',
+        category: ['DEFAULT', 'BROWSABLE'],
+        data: [
+          { scheme: 'content', mimeType: 'application/gpx+xml' },
+          { scheme: 'content', mimeType: 'application/octet-stream' },
+          { scheme: 'content', mimeType: 'text/xml' },
+          { scheme: 'content', mimeType: 'application/xml' },
+          { scheme: 'file', mimeType: 'application/gpx+xml' },
+        ],
+      },
+    ],
     permissions: [
       'ACCESS_FINE_LOCATION',
       'ACCESS_COARSE_LOCATION',
