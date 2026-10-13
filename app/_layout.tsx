@@ -1,8 +1,36 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect, useState } from 'react';
+import { SafetyNotice } from '../src/components/SafetyNotice';
+import '../src/services/locationTask';
+import { useSettingsStore } from '../src/stores/settingsStore';
 import { colors } from '../src/theme';
 
+function useHydrated(): boolean {
+  const [hydrated, setHydrated] = useState(useSettingsStore.persist.hasHydrated());
+  useEffect(() => {
+    const unsub = useSettingsStore.persist.onFinishHydration(() => setHydrated(true));
+    setHydrated(useSettingsStore.persist.hasHydrated());
+    return unsub;
+  }, []);
+  return hydrated;
+}
+
 export default function RootLayout() {
+  const hydrated = useHydrated();
+  const accepted = useSettingsStore((s) => s.safetyAccepted);
+  const acceptSafety = useSettingsStore((s) => s.acceptSafety);
+
+  if (!hydrated) return null;
+  if (!accepted) {
+    return (
+      <>
+        <StatusBar style="light" />
+        <SafetyNotice onAccept={acceptSafety} />
+      </>
+    );
+  }
+
   return (
     <>
       <StatusBar style="light" />
@@ -15,7 +43,9 @@ export default function RootLayout() {
       >
         <Stack.Screen name="index" options={{ title: 'cornerGuider' }} />
         <Stack.Screen name="import" options={{ title: 'Import', presentation: 'modal' }} />
+        <Stack.Screen name="settings" options={{ title: 'Einstellungen' }} />
         <Stack.Screen name="route/[id]" options={{ title: 'Route' }} />
+        <Stack.Screen name="drive/[id]" options={{ headerShown: false, gestureEnabled: false }} />
       </Stack>
     </>
   );

@@ -64,8 +64,11 @@ export default function RouteOverview() {
             {route.warnings.map((w) => (
               <Text key={w} style={styles.warning}>⚠︎ {w}</Text>
             ))}
-            <Pressable style={[styles.button, styles.disabled]} disabled>
-              <Text style={styles.buttonText}>Fahrt starten (folgt)</Text>
+            <Pressable
+              style={styles.button}
+              onPress={() => router.push({ pathname: '/drive/[id]', params: { id: route.id } })}
+            >
+              <Text style={styles.buttonText}>Fahrt starten</Text>
             </Pressable>
           </View>
         }
@@ -87,7 +90,6 @@ const styles = StyleSheet.create({
   summary: { color: colors.text, fontSize: 20, fontWeight: '700' },
   warning: { color: colors.warn, fontSize: 14, marginTop: 8, lineHeight: 20 },
   button: { backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginTop: 14 },
-  disabled: { opacity: 0.4 },
   buttonText: { color: '#000', fontSize: 17, fontWeight: '800' },
   delete: { color: colors.danger, textAlign: 'center', fontSize: 16 },
 });

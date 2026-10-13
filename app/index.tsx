@@ -1,4 +1,4 @@
-import { Link } from 'expo-router';
+import { Link, Stack } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { formatKm } from '../src/format';
@@ -25,6 +25,15 @@ export default function Routes() {
 
   return (
     <View style={styles.container}>
+      <Stack.Screen
+        options={{
+          headerRight: () => (
+            <Link href="/settings" asChild>
+              <Pressable hitSlop={12}><Text style={{ color: colors.accent, fontSize: 16 }}>Einstellungen</Text></Pressable>
+            </Link>
+          ),
+        }}
+      />
       <FlatList
         data={routes}
         keyExtractor={(r) => r.id}
