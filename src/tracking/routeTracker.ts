@@ -13,6 +13,8 @@ export interface Fix {
   accuracy: number | null;
   /** Zeitstempel der Messung (ms, epoch) */
   timestamp: number;
+  /** Fahrtrichtung in Grad (0 = Nord), falls vom GPS geliefert */
+  heading?: number | null;
 }
 
 export interface TrackerRoute {

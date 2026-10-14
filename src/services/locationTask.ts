@@ -13,13 +13,14 @@ export function addLocationListener(l: Listener): () => void {
 }
 
 export function toFix(loc: LocationObject): Fix {
-  const { latitude, longitude, speed, accuracy } = loc.coords;
+  const { latitude, longitude, speed, accuracy, heading } = loc.coords;
   return {
     lat: latitude,
     lon: longitude,
     speed: speed !== null && speed >= 0 ? speed : null,
     accuracy: accuracy ?? null,
     timestamp: loc.timestamp,
+    heading: heading !== null && heading >= 0 ? heading : null,
   };
 }
 

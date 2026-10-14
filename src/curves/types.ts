@@ -18,6 +18,9 @@ export interface Curve {
   direction: Direction;
   shape: Shape;
   grade: Grade;
+  /** Anfang und Ende der Kurve in den lokalen Metern der Eingabe (für Vergleiche und Wiedererkennung) */
+  startXY: XY;
+  endXY: XY;
   /** Folgt in < sequenceGapM auf die vorherige Kurve */
   followsPrevious: boolean;
   /** Abstand zur vorherigen Kurve (m), null bei der ersten */

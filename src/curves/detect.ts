@@ -18,12 +18,25 @@ export function detectCurves(
   points: LatLon[],
   config: Partial<CurveConfig> = {},
 ): DetectionResult {
-  const cfg: CurveConfig = { ...DEFAULT_CURVE_CONFIG, ...config };
   if (points.length < 2) throw new Error('detectCurves: mindestens 2 Punkte nötig');
-
   // 1. Projektion
   const proj = projectionForPoints(points);
-  const xy = dedupe(points.map((p) => proj.toXY(p)));
+  return analyze(points.map((p) => proj.toXY(p)), proj.origin, config);
+}
+
+/** Wie `detectCurves`, aber für bereits projizierte Punkte (lokale Meter um `origin`). */
+export function detectCurvesXY(
+  xy: XY[],
+  origin: LatLon,
+  config: Partial<CurveConfig> = {},
+): DetectionResult {
+  if (xy.length < 2) throw new Error('detectCurvesXY: mindestens 2 Punkte nötig');
+  return analyze(xy, origin, config);
+}
+
+function analyze(rawXY: XY[], origin: LatLon, config: Partial<CurveConfig>): DetectionResult {
+  const cfg: CurveConfig = { ...DEFAULT_CURVE_CONFIG, ...config };
+  const xy = dedupe(rawXY);
 
   // 2. Resampeln + glätten
   const path = smooth(resample(xy, cfg.resampleStepM), cfg.smoothHalfWindow);
@@ -50,7 +63,7 @@ export function detectCurves(
   curves.forEach((c, i) => (c.index = i));
 
   markSequences(curves, cfg);
-  return { curves, length, path, dist, projectionOrigin: proj.origin };
+  return { curves, length, path, dist, projectionOrigin: origin };
 }
 
 function buildRuns(curvature: number[], minCurv: number, mergeGapSamples: number): Run[] {
@@ -122,6 +135,8 @@ function buildCurve(
     grade: gradeForRadius(minRadius, cfg),
     followsPrevious: false,
     gapToPrevious: null,
+    startXY: path[from]!,
+    endXY: path[to]!,
     ...buildGeometry(from, to, path, cfg),
   };
 }
