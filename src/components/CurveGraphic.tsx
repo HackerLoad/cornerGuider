@@ -26,7 +26,7 @@ export function CurveGraphic({ curve, width, height, progressM }: Props) {
   return (
     <Svg width={width} height={height}>
       {/* Fahrbahnrand */}
-      <Path d={g.center} stroke={EDGE} strokeWidth={w} strokeLinejoin="round" fill="none" />
+      <Path d={g.center} stroke={EDGE} strokeWidth={w + 4} strokeLinejoin="round" fill="none" />
       {/* Kurvenabschnitt: Rand in Stufenfarbe */}
       <Path d={g.curve} stroke={color} strokeWidth={w + 4} strokeLinejoin="round" fill="none" />
       {/* Asphalt */}

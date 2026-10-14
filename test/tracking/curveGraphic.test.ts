@@ -72,7 +72,7 @@ describe('buildRoadGraphic', () => {
     const g = buildRoadGraphic(c, 300, 300, 30);
     expect(g.center.startsWith('M')).toBe(true);
     expect(g.line.startsWith('M')).toBe(true);
-    expect(g.roadWidth).toBeGreaterThanOrEqual(40);
+    expect(g.roadWidth).toBeGreaterThanOrEqual(28);
     // Fahrer startet auf gerader Einfahrt in der rechten Spur (Fahrtrichtung oben → rechts = größeres x)
     const first = g.center.match(/M(-?[\d.]+) (-?[\d.]+)/)!;
     expect(g.rider.x).toBeGreaterThan(Number(first[1]));
@@ -117,6 +117,8 @@ describe('Fahrlinie liegt auf dem Asphalt, in der eigenen Spur', () => {
       const d = distToPolyline(p, g.centerPts);
       // innerhalb der Fahrbahn (nie über den Rand) und nie auf der Mittellinie selbst
       expect(d).toBeLessThanOrEqual(half + 0.5);
+      // und mit Abstand zur Mittellinie (Gegenspur), nie auf der gestrichelten Linie
+      expect(d).toBeGreaterThanOrEqual(half * 0.2);
     }
     // Mittelwert der Abstände liegt in der Spurmitte-Gegend (~ halbe Fahrbahnhälfte), nicht am Rand
     const avg = g.linePts.reduce((s, p) => s + distToPolyline(p, g.centerPts), 0) / g.linePts.length;
@@ -147,5 +149,23 @@ describe('Fahrerposition und Stufenzahl', () => {
     const center = { x: g.numberAnchor.x, y: g.numberAnchor.y - 35 };
     const d = Math.min(...g.centerPts.map((p) => Math.hypot(p.x - center.x, p.y - center.y)));
     expect(d).toBeGreaterThan(40);
+  });
+});
+
+import { amplitudeForAngle, toPath } from '../../src/components/curveGraphicMath';
+
+describe('Auslenkung und Pfade', () => {
+  it('sanfte Kurven bekommen eine flachere Fahrlinie als enge', () => {
+    expect(amplitudeForAngle(30)).toBeLessThan(amplitudeForAngle(90));
+    expect(amplitudeForAngle(5)).toBeGreaterThan(0);
+    expect(amplitudeForAngle(180)).toBeCloseTo(LINE_AMPLITUDE, 9);
+  });
+
+  it('toPath liefert glatte Bézier-Pfade, die an Anfang und Ende der Punkte liegen', () => {
+    const d = toPath([{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 20, y: 10 }, { x: 30, y: 10 }]);
+    expect(d.startsWith('M0.0 0.0')).toBe(true);
+    expect(d).toContain('Q');
+    expect(d.endsWith('30.0 10.0')).toBe(true);
+    expect(toPath([{ x: 1, y: 2 }, { x: 3, y: 4 }])).toBe('M1.0 2.0 L3.0 4.0');
   });
 });

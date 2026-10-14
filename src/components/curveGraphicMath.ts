@@ -43,11 +43,7 @@ export function fitGeometry(
   const tx = (p: XY): XY => ({ x: w / 2 + (p.x - cx) * scale, y: h / 2 - (p.y - cy) * scale });
 
   const pts = geometry.map(tx);
-  const path = (a: number, b: number) =>
-    pts
-      .slice(a, b + 1)
-      .map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
-      .join(' ');
+  const path = (a: number, b: number) => toPath(pts.slice(a, b + 1));
   return {
     full: path(0, pts.length - 1),
     curve: path(curveStart, curveEnd),
@@ -65,7 +61,12 @@ export function fitGeometry(
 /** Quer zur Fahrtrichtung in halben Straßenbreiten: 0 = Mittellinie, +1 = linker Rand, −1 = rechter Rand. */
 export const OWN_LANE_CENTER = -0.5;
 /** Auslenkung der Fahrlinie aus der Spurmitte (Spurbreite = 1 = halbe Straßenbreite); hält Abstand zu beiden Rändern der eigenen Spur. */
-export const LINE_AMPLITUDE = 0.3;
+export const LINE_AMPLITUDE = 0.22;
+
+/** Sanfte Kurven bekommen eine flachere Linie: Auslenkung wächst mit dem Gesamtwinkel (voll ab ~70°). */
+export function amplitudeForAngle(totalAngleDeg: number): number {
+  return LINE_AMPLITUDE * Math.min(1, Math.max(0.35, totalAngleDeg / 70));
+}
 
 type Dir = 'left' | 'right';
 type Shape = 'tightening' | 'opening' | 'constant';
@@ -91,6 +92,7 @@ export function ridingLineOffsets(
   curveEnd: number,
   direction: Dir,
   shape: Shape,
+  amplitude: number = LINE_AMPLITUDE,
 ): number[] {
   const inside = direction === 'left' ? 1 : -1; // Seite, zu der die Kurve biegt
   const tApex = apexPosition(shape);
@@ -106,7 +108,7 @@ export function ridingLineOffsets(
       const t = curveEnd === curveStart ? 0 : (i - curveStart) / (curveEnd - curveStart);
       p = t < tApex ? -Math.cos((Math.PI * t) / tApex) : Math.cos((Math.PI * (t - tApex)) / (1 - tApex));
     }
-    out.push(OWN_LANE_CENTER + inside * LINE_AMPLITUDE * p);
+    out.push(OWN_LANE_CENTER + inside * amplitude * p);
   }
   return out;
 }
@@ -140,8 +142,24 @@ function movingAverage(pts: XY[], half: number): XY[] {
   });
 }
 
-function toPath(pts: XY[]): string {
-  return pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+const f1 = (n: number) => n.toFixed(1);
+
+/**
+ * Glatter SVG-Pfad durch die Punkte: quadratische Bézier-Kurven von Mittelpunkt zu Mittelpunkt,
+ * die Stützpunkte sind die Kontrollpunkte (kein Facettieren bei 5-m-Stützpunkten).
+ */
+export function toPath(pts: XY[]): string {
+  if (pts.length === 0) return '';
+  if (pts.length < 3) return pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${f1(p.x)} ${f1(p.y)}`).join(' ');
+  let d = `M${f1(pts[0]!.x)} ${f1(pts[0]!.y)}`;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const c = pts[i]!;
+    const n = pts[i + 1]!;
+    const mx = i === pts.length - 2 ? n.x : (c.x + n.x) / 2;
+    const my = i === pts.length - 2 ? n.y : (c.y + n.y) / 2;
+    d += ` Q${f1(c.x)} ${f1(c.y)} ${f1(mx)} ${f1(my)}`;
+  }
+  return d;
 }
 
 export interface RoadGraphic {
@@ -174,6 +192,8 @@ interface CurveLike {
   geometryCurveEnd: number;
   direction: Dir;
   shape: Shape;
+  /** Gesamtwinkel in Grad (steuert die Auslenkung der Fahrlinie) */
+  totalAngle?: number;
 }
 
 /** Kleinster Abstand zwischen Punkten, die mindestens `minIndexGap` Stützpunkte auseinanderliegen. */
@@ -237,7 +257,7 @@ export function buildRoadGraphic(
   const fit = fitGeometry(curve.geometry, curve.geometryCurveStart, curve.geometryCurveEnd, w, h, padding);
   const pts = fit.points;
   // Breite wie gewünscht, aber so, dass sich Straßenstücke (z. B. beide Schenkel einer Spitzkehre) nicht überlappen
-  const roadWidth = Math.max(14, Math.min(Math.min(64, Math.max(40, fit.scale * 7)), 0.8 * minSeparation(pts, 6)));
+  const roadWidth = Math.max(14, Math.min(Math.min(50, Math.max(28, fit.scale * 9)), 0.8 * minSeparation(pts, 6)));
   const half = roadWidth / 2;
   const normals = leftNormals(pts);
   const offsets = ridingLineOffsets(
@@ -246,6 +266,7 @@ export function buildRoadGraphic(
     curve.geometryCurveEnd,
     curve.direction,
     curve.shape,
+    curve.totalAngle === undefined ? LINE_AMPLITUDE : amplitudeForAngle(curve.totalAngle),
   );
   // Offsets sind in halben Straßenbreiten (±1 = Fahrbahnrand), daher Multiplikation mit half
   const raw = pts.map((p, i) => ({
