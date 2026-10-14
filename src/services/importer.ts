@@ -1,3 +1,4 @@
+import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 import { buildStoredRoute, summarize, type RouteSummary } from '../routes/model';
 import { saveRoute } from './routeStorage';
@@ -17,7 +18,7 @@ export async function importGpxFromUri(uri: string): Promise<RouteSummary> {
 
 /** Öffnet die Dateiauswahl; null bei Abbruch. */
 export async function pickAndImportGpx(): Promise<RouteSummary | null> {
-  const res = await File.pickFileAsync({ mimeTypes: ['*/*'] });
-  if (res.canceled) return null;
-  return importGpxFromUri(res.result.uri);
+  const res = await DocumentPicker.getDocumentAsync({ type: '*/*', copyToCacheDirectory: true });
+  const asset = res.canceled ? null : res.assets[0];
+  return asset ? importGpxFromUri(asset.uri) : null;
 }

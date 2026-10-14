@@ -30,11 +30,13 @@ Bekannte offene Punkte:
 
 ## Stack
 
-Expo SDK 57 (Development Build, kein Expo Go) · React Native · TypeScript (strict) · expo-router · Zustand · expo-location + expo-task-manager · expo-speech + expo-audio · react-native-svg · expo-file-system · Jest
+Expo SDK 54 / React Native 0.81 (Development Build, kein Expo Go; iOS-Build braucht Xcode ≥ 16.1) · React Native · TypeScript (strict) · expo-router · Zustand · expo-location + expo-task-manager · expo-speech + expo-audio · react-native-svg · expo-file-system · Jest
 
 ## Entwicklung
 
-Voraussetzungen: Node, für iOS Xcode, für Android Android Studio mit einem virtuellen Gerät.
+Voraussetzungen: Node, für iOS Xcode ≥ 16.1 und CocoaPods, für Android Android Studio mit einem virtuellen Gerät.
+
+> Die Expo-Version ist bewusst SDK 54: SDK 55 und neuer verlangen Xcode 26 für den iOS-Build.
 
 ```bash
 npm install
