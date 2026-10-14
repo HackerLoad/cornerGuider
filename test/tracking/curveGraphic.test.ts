@@ -89,3 +89,63 @@ describe('Straßenbreite bei Spitzkehre', () => {
     expect(g.lineWidth).toBeLessThanOrEqual(4.5);
   });
 });
+
+function distToPolyline(p: { x: number; y: number }, poly: { x: number; y: number }[]): number {
+  let best = Infinity;
+  for (let i = 0; i < poly.length - 1; i++) {
+    const a = poly[i]!, b = poly[i + 1]!;
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len2 = dx * dx + dy * dy || 1;
+    const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2));
+    best = Math.min(best, Math.hypot(p.x - (a.x + dx * t), p.y - (a.y + dy * t)));
+  }
+  return best;
+}
+
+describe('Fahrlinie liegt auf dem Asphalt, in der eigenen Spur', () => {
+  const cases: [string, ReturnType<TrackBuilder['arc']>][] = [
+    ['Rechtskurve R=60', new TrackBuilder().straight(100).arc('right', 60, 90).straight(100)],
+    ['Linkskurve R=60', new TrackBuilder().straight(100).arc('left', 60, 90).straight(100)],
+    ['Linkskurve R=25', new TrackBuilder().straight(100).arc('left', 25, 120).straight(100)],
+    ['Spitzkehre rechts R=12', new TrackBuilder().straight(100).arc('right', 12, 180).straight(100)],
+  ];
+  it.each(cases)('%s', (_name, t) => {
+    const c = detectCurves(t.latLon()).curves[0]!;
+    const g = buildRoadGraphic(c, 360, 360, 36);
+    const half = g.roadWidth / 2;
+    for (const p of g.linePts) {
+      const d = distToPolyline(p, g.centerPts);
+      // innerhalb der Fahrbahn (nie über den Rand) und nie auf der Mittellinie selbst
+      expect(d).toBeLessThanOrEqual(half + 0.5);
+    }
+    // Mittelwert der Abstände liegt in der Spurmitte-Gegend (~ halbe Fahrbahnhälfte), nicht am Rand
+    const avg = g.linePts.reduce((s, p) => s + distToPolyline(p, g.centerPts), 0) / g.linePts.length;
+    expect(avg).toBeGreaterThan(half * 0.2);
+    expect(avg).toBeLessThan(half * 0.9);
+  });
+});
+
+describe('Fahrerposition und Stufenzahl', () => {
+  const c = detectCurves(new TrackBuilder().straight(150).arc('left', 60, 90).straight(150).latLon()).curves[0]!;
+
+  it('Fahrer wandert mit dem Fortschritt entlang der Linie', () => {
+    const far = buildRoadGraphic(c, 360, 360, 36, -500);
+    const atStart = buildRoadGraphic(c, 360, 360, 36, 0);
+    const inside = buildRoadGraphic(c, 360, 360, 36, 40);
+    expect(far.rider).toEqual(far.linePts[0]);
+    // am Kurvenanfang liegt der Fahrer weiter oben (kleineres y) als am Geometrieanfang
+    expect(atStart.rider.y).toBeLessThan(far.rider.y);
+    expect(inside.rider.y).toBeLessThan(atStart.rider.y + 1);
+    // die restliche Linie beginnt an der Fahrerposition
+    const m = inside.line.match(/M(-?[\d.]+) (-?[\d.]+)/)!;
+    expect(Number(m[1])).toBeCloseTo(inside.rider.x, 0);
+    expect(Number(m[2])).toBeCloseTo(inside.rider.y, 0);
+  });
+
+  it('Stufenzahl liegt weit weg von der Straße', () => {
+    const g = buildRoadGraphic(c, 360, 360, 36);
+    const center = { x: g.numberAnchor.x, y: g.numberAnchor.y - 35 };
+    const d = Math.min(...g.centerPts.map((p) => Math.hypot(p.x - center.x, p.y - center.y)));
+    expect(d).toBeGreaterThan(40);
+  });
+});

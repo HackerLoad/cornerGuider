@@ -7,6 +7,8 @@ interface Props {
   curve: Curve;
   width: number;
   height: number;
+  /** Position des Fahrers relativ zum Kurvenanfang in m (negativ = noch davor) */
+  progressM?: number;
 }
 
 const ASPHALT = '#262b31';
@@ -17,11 +19,10 @@ const LINE = '#00e5ff';
  * Zweispurige Straße in Fahrtrichtung (oben): eigene Spur rechts, Gegenspur links, gestrichelte
  * Mittellinie, Kurvenabschnitt am Rand in der Farbe der Stufe, dazu die Fahrlinie in der eigenen Spur.
  */
-export function CurveGraphic({ curve, width, height }: Props) {
-  const g = buildRoadGraphic(curve, width, height, 36);
+export function CurveGraphic({ curve, width, height, progressM }: Props) {
+  const g = buildRoadGraphic(curve, width, height, 36, progressM);
   const color = colors.grade[curve.grade - 1];
   const w = g.roadWidth;
-  const numX = curve.direction === 'left' ? width - 56 : 56;
   return (
     <Svg width={width} height={height}>
       {/* Fahrbahnrand */}
@@ -38,7 +39,7 @@ export function CurveGraphic({ curve, width, height }: Props) {
       <Path d={g.line} stroke="#000" strokeWidth={g.lineWidth + 3.5} strokeLinecap="round" strokeLinejoin="round" fill="none" opacity={0.6} />
       <Path d={g.line} stroke={LINE} strokeWidth={g.lineWidth} strokeLinecap="round" strokeLinejoin="round" fill="none" />
       <Circle cx={g.rider.x} cy={g.rider.y} r={g.riderRadius} fill={LINE} stroke="#000" strokeWidth={2} />
-      <SvgText x={numX} y={height - 20} fill={color} fontSize={96} fontWeight="900" textAnchor="middle">
+      <SvgText x={g.numberAnchor.x} y={g.numberAnchor.y} fill={color} fontSize={96} fontWeight="900" textAnchor="middle">
         {curve.grade}
       </SvgText>
     </Svg>

@@ -62,9 +62,9 @@ export function fitGeometry(
 // Straße mit Gegenspur und Fahrlinie
 // ---------------------------------------------------------------------------
 
-/** Quer zur Fahrtrichtung in Fahrbahnbreiten: 0 = Mittellinie, +1 = linker Rand, −1 = rechter Rand. */
+/** Quer zur Fahrtrichtung in halben Straßenbreiten: 0 = Mittellinie, +1 = linker Rand, −1 = rechter Rand. */
 export const OWN_LANE_CENTER = -0.5;
-/** Auslenkung der Fahrlinie aus der Spurmitte (Spurbreite = 1); hält Abstand zu beiden Rändern der eigenen Spur. */
+/** Auslenkung der Fahrlinie aus der Spurmitte (Spurbreite = 1 = halbe Straßenbreite); hält Abstand zu beiden Rändern der eigenen Spur. */
 export const LINE_AMPLITUDE = 0.3;
 
 type Dir = 'left' | 'right';
@@ -111,11 +111,14 @@ export function ridingLineOffsets(
   return out;
 }
 
-/** Linke Normale in Bildschirmkoordinaten (y nach unten), aus den Nachbarpunkten geglättet. */
+/**
+ * Linke Normale in Bildschirmkoordinaten (y nach unten) aus den direkten Nachbarpunkten.
+ * Bewusst kein größeres Fenster: Bei Spitzkehren dreht sich der Weg über 40 m um fast 190°.
+ */
 function leftNormals(pts: XY[]): XY[] {
   return pts.map((_, i) => {
-    const a = pts[Math.max(0, i - 4)]!;
-    const b = pts[Math.min(pts.length - 1, i + 4)]!;
+    const a = pts[Math.max(0, i - 1)]!;
+    const b = pts[Math.min(pts.length - 1, i + 1)]!;
     const dx = b.x - a.x;
     const dy = b.y - a.y;
     const len = Math.hypot(dx, dy) || 1;
@@ -146,10 +149,15 @@ export interface RoadGraphic {
   center: string;
   /** Nur der Kurventeil der Mittellinie */
   curve: string;
-  /** Fahrlinie durch die Kurve in der eigenen Spur */
+  /** Restliche Fahrlinie ab der aktuellen Position, in der eigenen Spur */
   line: string;
-  /** Position des Fahrers (Anfang der Fahrlinie) */
+  /** Aktuelle Position des Fahrers auf der Fahrlinie */
   rider: XY;
+  /** Mittellinie und vollständige Fahrlinie als Punkte (px), v. a. für Tests */
+  centerPts: XY[];
+  linePts: XY[];
+  /** Grundlinie (y) und Mitte (x) für die große Stufenzahl, dort wo sie die Straße nicht verdeckt */
+  numberAnchor: XY;
   start: XY;
   end: XY;
   /** Straßenbreite in px (beide Spuren) */
@@ -179,12 +187,58 @@ function minSeparation(pts: XY[], minIndexGap: number): number {
   return best;
 }
 
-/** Alles, was die Grafik braucht: Straßenband, Kurventeil und Fahrlinie in Pixeln. */
-export function buildRoadGraphic(curve: CurveLike, w: number, h: number, padding: number): RoadGraphic {
+/** Punkt bei gebrochenem Index f (lineare Interpolation). */
+function pointAt(pts: XY[], f: number): XY {
+  const i = Math.min(pts.length - 2, Math.max(0, Math.floor(f)));
+  const t = Math.min(1, Math.max(0, f - i));
+  const a = pts[i]!;
+  const b = pts[i + 1]!;
+  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+}
+
+/**
+ * Ecke für die große Stufenzahl wählen, die am weitesten von Straße und Fahrlinie entfernt ist.
+ * Rückgabe: x = Mitte, y = Grundlinie der Zahl (Zahl ist ~70 px hoch).
+ */
+export function pickNumberAnchor(avoid: XY[], w: number, h: number): XY {
+  const candidates: XY[] = [
+    { x: 56, y: h - 20 },
+    { x: w - 56, y: h - 20 },
+    { x: 56, y: 96 },
+    { x: w - 56, y: 96 },
+  ];
+  let best = candidates[0]!;
+  let bestD = -1;
+  for (const c of candidates) {
+    const center = { x: c.x, y: c.y - 35 };
+    let d = Infinity;
+    for (const p of avoid) d = Math.min(d, Math.hypot(p.x - center.x, p.y - center.y));
+    if (d > bestD) {
+      bestD = d;
+      best = c;
+    }
+  }
+  return best;
+}
+
+/**
+ * Alles, was die Grafik braucht: Straßenband, Kurventeil und Fahrlinie in Pixeln.
+ * `progressM` = Position des Fahrers relativ zum Kurvenanfang in Metern (negativ = davor);
+ * ohne Angabe steht der Fahrer am Anfang der Geometrie.
+ */
+export function buildRoadGraphic(
+  curve: CurveLike,
+  w: number,
+  h: number,
+  padding: number,
+  progressM?: number,
+  stepM = 5,
+): RoadGraphic {
   const fit = fitGeometry(curve.geometry, curve.geometryCurveStart, curve.geometryCurveEnd, w, h, padding);
   const pts = fit.points;
   // Breite wie gewünscht, aber so, dass sich Straßenstücke (z. B. beide Schenkel einer Spitzkehre) nicht überlappen
   const roadWidth = Math.max(14, Math.min(Math.min(64, Math.max(40, fit.scale * 7)), 0.8 * minSeparation(pts, 6)));
+  const half = roadWidth / 2;
   const normals = leftNormals(pts);
   const offsets = ridingLineOffsets(
     pts.length,
@@ -193,17 +247,29 @@ export function buildRoadGraphic(curve: CurveLike, w: number, h: number, padding
     curve.direction,
     curve.shape,
   );
-  // Fahrlinie leicht glätten, damit sie nicht an den 5-m-Stützpunkten knickt
+  // Offsets sind in halben Straßenbreiten (±1 = Fahrbahnrand), daher Multiplikation mit half
   const raw = pts.map((p, i) => ({
-    x: p.x + normals[i]!.x * offsets[i]! * roadWidth,
-    y: p.y + normals[i]!.y * offsets[i]! * roadWidth,
+    x: p.x + normals[i]!.x * offsets[i]! * half,
+    y: p.y + normals[i]!.y * offsets[i]! * half,
   }));
-  const line = movingAverage(movingAverage(raw, 2), 2);
+  // Fahrlinie leicht glätten, damit sie nicht an den 5-m-Stützpunkten knickt
+  const line = movingAverage(raw, 1);
+
+  const f =
+    progressM === undefined
+      ? 0
+      : Math.min(pts.length - 1, Math.max(0, curve.geometryCurveStart + progressM / stepM));
+  const rider = pointAt(line, f);
+  const remaining = [rider, ...line.slice(Math.floor(f) + 1)];
+
   return {
     center: fit.full,
     curve: fit.curve,
-    line: toPath(line),
-    rider: line[0]!,
+    line: toPath(remaining),
+    rider,
+    centerPts: pts,
+    linePts: line,
+    numberAnchor: pickNumberAnchor([...pts, ...line], w, h),
     start: fit.start,
     end: fit.end,
     roadWidth,

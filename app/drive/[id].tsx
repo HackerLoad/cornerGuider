@@ -115,7 +115,12 @@ export default function DriveScreen() {
 
       {first && snap?.status === 'onRoute' ? (
         <View style={styles.graphic}>
-          <CurveGraphic curve={first.curve} width={width} height={graphicH} />
+          <CurveGraphic
+            curve={first.curve}
+            width={width}
+            height={graphicH}
+            progressM={snap ? snap.dist - first.curve.startDist : undefined}
+          />
         </View>
       ) : (
         <View style={{ height: graphicH }} />
