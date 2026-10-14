@@ -16,6 +16,8 @@ export interface FreerideSnapshot extends FreerideState {
   dataError?: string;
   /** Letzte gesprochene Ansage */
   lastSpoken?: string;
+  /** m/s (0 wenn unbekannt) */
+  speed: number;
 }
 
 export interface RecordedFix {
@@ -76,6 +78,7 @@ const initialSnapshot = (xy: XY): FreerideSnapshot => ({
   riderDist: 0,
   upcoming: [],
   data: 'loading',
+  speed: 0,
 });
 
 /** Freie Fahrt: Positionen → Straßendaten (OSM) laden → Kurven vorhersagen → ansagen → aufzeichnen. */
@@ -163,7 +166,7 @@ export class FreerideSession {
     else this.stats[state.status]++;
     if (state.endReason) this.stats.endReasons[state.endReason] = (this.stats.endReasons[state.endReason] ?? 0) + 1;
 
-    this.emit({ ...state, data, dataError: this.dataError, lastSpoken: this.lastSpoken });
+    this.emit({ ...state, data, dataError: this.dataError, lastSpoken: this.lastSpoken, speed: fix.speed ?? 0 });
   }
 
   private emit(s: FreerideSnapshot): void {

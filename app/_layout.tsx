@@ -46,6 +46,9 @@ export default function RootLayout() {
         <Stack.Screen name="settings" options={{ title: 'Einstellungen' }} />
         <Stack.Screen name="route/[id]" options={{ title: 'Route' }} />
         <Stack.Screen name="drive/[id]" options={{ headerShown: false, gestureEnabled: false }} />
+        <Stack.Screen name="freeride" options={{ title: 'Freie Fahrt' }} />
+        <Stack.Screen name="freeride-drive" options={{ headerShown: false, gestureEnabled: false }} />
+        <Stack.Screen name="freeride-result/[id]" options={{ title: 'Auswertung' }} />
       </Stack>
     </>
   );

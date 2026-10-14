@@ -20,6 +20,7 @@ MVP-Funktionen sind implementiert, aber **noch nicht auf einem Gerät getestet**
 | Tracker (Snapping, Off-Route, Latenzausgleich) | fertig, getestet |
 | Fahrmodus, Kurvengrafik, Sprachansagen, Hintergrund-Ortung | fertig, nicht auf Gerät getestet |
 | Simulationsmodus | fertig, getestet |
+| Freie Fahrt (OSM, Versuch) | Kern getestet, App-Oberfläche nicht auf Gerät geprüft |
 
 Bekannte offene Punkte:
 
@@ -132,36 +133,38 @@ Schichten: `UI → stores → services → core (reines TS)`. Die Kernlogik hat 
 - **GPX-Hinweis:** Verwende Tracks oder dicht gepunktete Routen. Dateien mit nur wenigen Wegpunkten (Ø > 100 m Abstand) liefern ungenaue Kurven; die App warnt beim Import.
 - Test-Fixtures (`test/fixtures`): Tracks aus [gpx-rider/gpx-rider.github.io](https://github.com/gpx-rider/gpx-rider.github.io) (MIT-Lizenz).
 
-## Geplant: Freifahrt ohne Route (OpenStreetMap)
+## Freie Fahrt (Versuch, OpenStreetMap)
 
-Noch nicht implementiert und bewusst nicht Teil des MVP. Ohne Route kennt die App den Straßenverlauf nicht, er muss vorhergesagt werden. Als Datenquelle ist **OpenStreetMap** vorgesehen.
+Ohne geplante Route sagt die App den Straßenverlauf aus **OpenStreetMap**-Daten (Overpass-API) voraus und meldet daraus die kommenden Kurven. Auf der Startseite: **Freie Fahrt (Versuch)**.
 
-**Idee**
+**Ablauf** (`src/freeride/`, reines TS, getestet)
 
-1. **Map-Matching:** GPS-Position der aktuellen Straße zuordnen, in Fahrtrichtung.
-2. **Pfad vorhersagen:** Der Straße ca. 500–1000 m nach vorn folgen. An Kreuzungen die wahrscheinlichste Weiterfahrt wählen (kleinste Richtungsänderung, gleiche Straßenklasse bzw. -nummer).
-3. **Kurven berechnen:** Der vorhergesagte Pfad geht in dieselbe `detectCurves`-Pipeline wie eine importierte Route.
-4. **Rollender Pfad statt fester Route:** `DriveSession` bekommt einen Pfad-Lieferanten, der neu rechnet, sobald sich die Vorhersage ändert. Tracker, Ansagen, Fahrmodus-UI und Simulator bleiben weitgehend unverändert.
+1. **Daten:** Straßen im Umkreis (1,5 km) werden per Overpass geladen und rechtzeitig vor der Fahrt nachgeladen. Die öffentlichen Server sind oft überlastet (504/429): Der Client wiederholt mit wachsender Wartezeit und wechselt den Server.
+2. **Map-Matching:** Position und Fahrtrichtung werden der wahrscheinlichsten Straße zugeordnet (Richtung, Abstand, Einbahnstraßen, Hysterese). Bei parallelen Straßen ohne klaren Favoriten gilt die Zuordnung als unsicher.
+3. **Pfadvorhersage:** Der Straße wird ~600 m voraus (und 80 m zurück) gefolgt. An Kreuzungen ohne klare Weiterfahrt (Gabelung, Kreisverkehr) **endet die Vorhersage**, dahinter wird nichts angesagt. Bei gleicher Straßennummer bzw. gleichem Namen zählt die durchgehende Straße als Weiterfahrt.
+4. **Kurven:** dieselbe Erkennung wie bei geplanten Routen (`detectCurvesXY`), dieselbe Kurvengrafik mit Fahrlinie, dieselben Ansagen. Kurven am Pfadende (unvollständig) und bei unsicherer Zuordnung werden nicht angesagt.
+5. **Aufzeichnung und Auswertung:** Die Fahrt wird aufgezeichnet. Danach vergleicht die App die angesagten Kurven mit denen der tatsächlich gefahrenen Spur (Genauigkeit, Trefferquote, Falschmeldungen).
 
-Neuer Kern als reines TS-Modul (Straßengraph, Map-Matching, Pfadvorhersage), testbar mit synthetischen Straßennetzen.
+**Gemessen** (Simulation entlang der GPX-Fixtures, Straßendaten echt aus OSM; Regressionstests unter `test/freeride`):
 
-**Datenquelle**
+| Strecke | Ansagen richtig | Kurven bis Stufe 4 erkannt |
+| --- | --- | --- |
+| Amalfi (6,6 km) | 99 % (73 von 74) | 93 % (67 von 72) |
+| Stelvio (5,9 km) | 89 % (33 von 37) | 71 % (24 von 34) |
 
-- *Stufe 1 (Versuch):* Overpass-API mit lokalem Cache. Schnell gebaut, braucht Netz; im Gebirge ist die Abdeckung unterwegs schlecht, und die API hat Limits.
-- *Stufe 2:* Offline-Regionspakete aus OSM-Auszügen, vorab heruntergeladen. Robust, aber mehr Aufwand (Download, Format, Speicher, Aktualisierung).
-- OSM-Daten stehen unter der ODbL-Lizenz. Die Quellenangabe „© OpenStreetMap-Mitwirkende" muss in der App sichtbar sein.
+Das sind Entwicklungswerte mit dem GPX-Track als Wahrheit, **keine Aussage über echte Fahrten**. Bei Stelvio läuft der Track teils über Nebenstraßen, dort endet die Vorhersage oft an Kreuzungen (die App schweigt). Bekannte Schwächen:
 
-**Sicherheit**
+- Ist die OSM-Geometrie gröber als die echte Straße (z. B. Spitzkehren), wird die Stufe zu mild eingeschätzt (gemessen: Spitzkehre mit R 7 m als „Rechts 4" vorhergesagt).
+- Braucht Internet; ohne Daten zeigt die App „Keine Straßendaten".
+- Ob die Positionen eines echten Fahrzeugs (GPS-Rauschen, Tunnel, Latenz) genauso gut passen, ist **noch nicht auf einer echten Fahrt geprüft**.
 
-An Kreuzungen kann die Vorhersage falsch liegen und eine Kurve melden, die man nicht fährt. Deshalb:
+**Testfahrt:** Freie Fahrt → „Fahrt starten (GPS)" (als Beifahrer, nicht während der Fahrt bedienen). Nach „Beenden" erscheint die Auswertung. Zum Entwickeln gibt es „Simulation entlang einer importierten Route" (simuliertes GPS, echte OSM-Daten).
 
-- Vor unsicheren Stellen (mehrere plausible Weiterfahrten) keine Kurve jenseits der Kreuzung ansagen.
-- In der Anzeige klar „unsicher" kennzeichnen und erst nach dem Abbiegen neu vorhersagen.
-- Erst nach dem Gerätetest des MVP angehen und die Vorhersagequalität in einem kleinen Versuch messen (Straße geradeaus, ohne Kreuzungslogik).
+Straßendaten © OpenStreetMap-Mitwirkende (ODbL); die Quellenangabe steht in der App. Plan und Hintergründe: `docs/freeride-overpass-spike.md`.
 
 ## Nicht im MVP
 
-Eigenes Routing, Accounts/Backend, Integration fremder Navi-Apps. Freifahrt ohne Route: siehe oben (geplant).
+Eigenes Routing, Accounts/Backend, Integration fremder Navi-Apps. (Freie Fahrt ohne Route: siehe oben, als Versuch umgesetzt.)
 
 ## Bundle-ID
 

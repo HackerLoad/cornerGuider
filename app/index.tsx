@@ -55,6 +55,11 @@ export default function Routes() {
           </Link>
         )}
       />
+      <Link href="/freeride" asChild>
+        <Pressable style={styles.secondary}>
+          <Text style={styles.secondaryText}>Freie Fahrt (Versuch)</Text>
+        </Pressable>
+      </Link>
       <Pressable style={[styles.button, busy && { opacity: 0.6 }]} onPress={onImport} disabled={busy}>
         {busy ? <ActivityIndicator color="#000" /> : <Text style={styles.buttonText}>GPX importieren</Text>}
       </Pressable>
@@ -76,4 +81,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buttonText: { color: '#000', fontSize: 18, fontWeight: '800' },
+  secondary: { marginHorizontal: 16, marginBottom: -4, backgroundColor: colors.card, borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
+  secondaryText: { color: colors.accent, fontSize: 17, fontWeight: '700' },
 });

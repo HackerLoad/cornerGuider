@@ -1,6 +1,6 @@
 # Plan: Overpass-Versuch für die Freifahrt (ohne Route)
 
-Status: Plan, nichts davon ist implementiert. Kontext siehe README, Abschnitt „Geplant: Freifahrt ohne Route".
+Status: umgesetzt (siehe README, Abschnitt „Freie Fahrt (Versuch)"). Offen: Fahrt mit echtem GPS und Auswertung in der App; Go/No-Go erst danach. Kontext siehe README, Abschnitt „Geplant: Freifahrt ohne Route".
 
 ## Ziel
 
