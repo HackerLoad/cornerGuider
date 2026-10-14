@@ -20,6 +20,8 @@ export interface FreerideState {
   endReason?: EndReason;
   /** Länge des vorhergesagten Pfads ab der Position (m) */
   aheadM: number;
+  /** Position auf dem vorhergesagten Pfad; `curve.startDist` der Kurven liegt in derselben Koordinate (m) */
+  riderDist: number;
   upcoming: UpcomingCurve[];
 }
 
@@ -72,15 +74,16 @@ export class FreerideEngine {
     const heading = this.headingOf(fix, xy);
     const match = matchPosition(this.graph, xy, heading, this.prev);
     this.prev = match;
-    if (!match) return { status: 'noRoad', riderXY: xy, heading, aheadM: 0, upcoming: [] };
+    if (!match) return { status: 'noRoad', riderXY: xy, heading, aheadM: 0, riderDist: 0, upcoming: [] };
 
     const path = predictPath(this.graph, match, this.cfg.path);
     let upcoming: UpcomingCurve[] = [];
+    let riderDist = path.positionDist;
     if (path.pts.length >= 3) {
       const det = detectCurvesXY(path.pts, this.graph.projection.origin);
-      const rider = snapToPolyline(match.point, det.path, det.dist).dist;
+      riderDist = snapToPolyline(match.point, det.path, det.dist).dist;
       const complete = det.curves.filter((c) => c.endDist < det.length - this.cfg.truncatedWithinM);
-      upcoming = nextCurves(complete, rider, this.cfg.upcomingCount);
+      upcoming = nextCurves(complete, riderDist, this.cfg.upcomingCount);
     }
     return {
       status: match.confident ? 'ok' : 'uncertain',
@@ -90,6 +93,7 @@ export class FreerideEngine {
       wayRef: path.wayRef,
       endReason: path.endReason,
       aheadM: path.ahead,
+      riderDist,
       upcoming,
     };
   }
