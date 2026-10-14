@@ -14,6 +14,9 @@ import { speak, stopSpeaking } from '../../src/services/speech';
 import { currentDriveSettings } from '../../src/stores/settingsStore';
 import { colors } from '../../src/theme';
 
+/** Kopfzeile: nie umbrechen, die Schrift schrumpft stattdessen, bis der Text in die Breite passt. */
+const ONE_LINE = { numberOfLines: 1, adjustsFontSizeToFit: true, minimumFontScale: 0.4 } as const;
+
 function SimBtn({ label, onPress }: { label: string; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} style={styles.simBtn}>
@@ -98,18 +101,18 @@ export default function DriveScreen() {
     <View style={styles.container}>
       <View style={styles.top}>
         {snap?.status === 'offRoute' ? (
-          <Text style={styles.alert}>ABSEITS DER ROUTE</Text>
+          <Text style={styles.alert} {...ONE_LINE}>ABSEITS DER ROUTE</Text>
         ) : snap?.status === 'finished' ? (
-          <Text style={styles.big}>Ziel erreicht</Text>
+          <Text style={styles.big} {...ONE_LINE}>Ziel erreicht</Text>
         ) : !snap || snap.status === 'acquiring' ? (
-          <Text style={styles.big}>GPS wird gesucht …</Text>
+          <Text style={styles.big} {...ONE_LINE}>GPS wird gesucht …</Text>
         ) : first ? (
-          <Text style={styles.big}>
+          <Text style={styles.big} {...ONE_LINE}>
             {first.inside ? 'Jetzt' : `In ${formatDistance(Math.round(first.distanceTo / 10) * 10)}`}:{' '}
             {directionLabel(first.curve.direction)} {first.curve.grade}
           </Text>
         ) : (
-          <Text style={styles.big}>Keine Kurven mehr</Text>
+          <Text style={styles.big} {...ONE_LINE}>Keine Kurven mehr</Text>
         )}
       </View>
 
