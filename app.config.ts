@@ -5,7 +5,7 @@ const config: ExpoConfig = {
   slug: 'cornerguider',
   scheme: 'cornerguider',
   version: '0.1.0',
-  orientation: 'portrait',
+  orientation: 'default',
   icon: './assets/icon.png',
   userInterfaceStyle: 'dark',
   ios: {

@@ -1,8 +1,9 @@
 import { useKeepAwake } from 'expo-keep-awake';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { CurveGraphic } from '../src/components/CurveGraphic';
+import { DriveLayout } from '../src/components/DriveLayout';
 import { SimulatedLocationSource } from '../src/drive/simulator';
 import { FreerideSession, type FreerideSnapshot } from '../src/freeride/session';
 import { directionLabel, formatDistance } from '../src/format';
@@ -47,7 +48,6 @@ function roadLine(s: FreerideSnapshot | null): string {
 export default function FreerideDrive() {
   useKeepAwake();
   const { sim: simRouteId } = useLocalSearchParams<{ sim?: string }>();
-  const { width, height } = useWindowDimensions();
   const [snap, setSnap] = useState<FreerideSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [session, setSession] = useState<FreerideSession | null>(null);
@@ -118,27 +118,24 @@ export default function FreerideDrive() {
   const head = headline(snap);
   const first = snap && snap.status !== 'noRoad' ? snap.upcoming[0] : undefined;
   const rest = snap?.upcoming.slice(1) ?? [];
-  const graphicH = Math.max(180, Math.min(width, height * 0.4));
 
   return (
-    <View style={styles.container}>
-      <View style={styles.top}>
-        <Text style={[styles.big, head.tone === 'bad' && { color: colors.danger }, head.tone === 'warn' && { color: colors.warn }]} {...ONE_LINE}>
-          {head.text}
-        </Text>
-        <Text style={styles.road} numberOfLines={1}>{roadLine(snap)}</Text>
-      </View>
-
-      {first && snap?.status === 'ok' ? (
-        <View style={styles.graphic}>
-          <CurveGraphic curve={first.curve} width={width} height={graphicH} progressM={snap.riderDist - first.curve.startDist} />
+    <DriveLayout
+      header={
+        <View>
+          <Text style={[styles.big, head.tone === 'bad' && { color: colors.danger }, head.tone === 'warn' && { color: colors.warn }]} {...ONE_LINE}>
+            {head.text}
+          </Text>
+          <Text style={styles.road} numberOfLines={1}>{roadLine(snap)}</Text>
         </View>
-      ) : (
-        <View style={{ height: graphicH }} />
-      )}
-
-      <ScrollView style={styles.list}>
-        {snap?.status === 'ok'
+      }
+      graphic={({ width: w, height: h }) =>
+        first && snap?.status === 'ok' ? (
+          <CurveGraphic curve={first.curve} width={w} height={h} progressM={snap.riderDist - first.curve.startDist} />
+        ) : null
+      }
+      list={
+        snap?.status === 'ok'
           ? rest.map((u) => (
               <View key={`${u.curve.startXY.x.toFixed(0)}_${u.curve.startXY.y.toFixed(0)}`} style={styles.item}>
                 <Text style={[styles.itemGrade, { color: colors.grade[u.curve.grade - 1] }]}>{u.curve.grade}</Text>
@@ -146,29 +143,31 @@ export default function FreerideDrive() {
                 <Text style={styles.itemDist}>in {formatDistance(Math.round(u.distanceTo / 10) * 10)}</Text>
               </View>
             ))
-          : null}
-      </ScrollView>
-
-      {sim ? (
-        <View style={styles.simBar}>
-          <Text style={styles.simLabel}>SIMULATION {Math.round(sim.speedKmh)} km/h</Text>
-          <View style={styles.simRow}>
-            <SimBtn label="−10" onPress={() => { sim.setSpeedKmh(sim.speedKmh - 10); redraw((n) => n + 1); }} />
-            <SimBtn label="+10" onPress={() => { sim.setSpeedKmh(sim.speedKmh + 10); redraw((n) => n + 1); }} />
-            <SimBtn label={sim.isPaused ? 'Weiter' : 'Pause'} onPress={() => { sim.setPaused(!sim.isPaused); redraw((n) => n + 1); }} />
-            <SimBtn label="+500 m" onPress={() => sim.jump(500)} />
+          : null
+      }
+      sim={
+        sim ? (
+          <View style={styles.simBar}>
+            <Text style={styles.simLabel}>SIMULATION {Math.round(sim.speedKmh)} km/h</Text>
+            <View style={styles.simRow}>
+              <SimBtn label="−10" onPress={() => { sim.setSpeedKmh(sim.speedKmh - 10); redraw((n) => n + 1); }} />
+              <SimBtn label="+10" onPress={() => { sim.setSpeedKmh(sim.speedKmh + 10); redraw((n) => n + 1); }} />
+              <SimBtn label={sim.isPaused ? 'Weiter' : 'Pause'} onPress={() => { sim.setPaused(!sim.isPaused); redraw((n) => n + 1); }} />
+              <SimBtn label="+500 m" onPress={() => sim.jump(500)} />
+            </View>
           </View>
+        ) : null
+      }
+      footer={
+        <View style={styles.footer}>
+          <View>
+            <Text style={styles.footerText}>{snap ? `${Math.round(snap.speed * 3.6)} km/h` : ''}</Text>
+            <Text style={styles.attribution}>© OpenStreetMap-Mitwirkende</Text>
+          </View>
+          <Pressable onPress={confirmStop} style={styles.stop}><Text style={styles.stopText}>Beenden</Text></Pressable>
         </View>
-      ) : null}
-
-      <View style={styles.footer}>
-        <View>
-          <Text style={styles.footerText}>{snap ? `${Math.round(snap.speed * 3.6)} km/h` : ''}</Text>
-          <Text style={styles.attribution}>© OpenStreetMap-Mitwirkende</Text>
-        </View>
-        <Pressable onPress={confirmStop} style={styles.stop}><Text style={styles.stopText}>Beenden</Text></Pressable>
-      </View>
-    </View>
+      }
+    />
   );
 }
 
@@ -181,14 +180,10 @@ function SimBtn({ label, onPress }: { label: string; onPress: () => void }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000', paddingTop: 54 },
   center: { flex: 1, backgroundColor: '#000', alignItems: 'center', justifyContent: 'center', padding: 24, gap: 16 },
-  top: { paddingHorizontal: 16, minHeight: 84, justifyContent: 'center' },
   big: { color: '#fff', fontSize: 40, fontWeight: '900' },
   alert: { color: colors.danger, fontSize: 28, fontWeight: '800', textAlign: 'center' },
   road: { color: colors.muted, fontSize: 15, marginTop: 2 },
-  graphic: { alignItems: 'center' },
-  list: { flex: 1, paddingHorizontal: 16 },
   item: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.border },
   itemGrade: { fontSize: 32, fontWeight: '900', width: 40, textAlign: 'center' },
   itemText: { color: '#fff', fontSize: 26, fontWeight: '700', flex: 1 },
@@ -198,7 +193,7 @@ const styles = StyleSheet.create({
   simRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   simBtn: { backgroundColor: colors.border, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 12 },
   simBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
-  footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, paddingBottom: 28 },
+  footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12, paddingHorizontal: 16 },
   footerText: { color: colors.muted, fontSize: 18 },
   attribution: { color: colors.muted, fontSize: 12 },
   stop: { backgroundColor: colors.card, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 18 },

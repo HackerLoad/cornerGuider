@@ -67,6 +67,10 @@ Gibt pro Kurve Start, Länge, Richtung, Stufe, Mindestradius, Winkel, Form (zieh
 
 Die Simulation nutzt dieselbe Fahrmodus-Logik wie die echte Fahrt (`DriveSession`), nur die Positionsquelle ist ausgetauscht.
 
+## Ausrichtung
+
+Die App dreht sich mit dem Handy. Im **Querformat** (Handy quer am Lenker) zeigt der Fahrmodus links Kopfzeile, Kurvenliste und Knöpfe, rechts die große Kurvengrafik (`src/components/DriveLayout.tsx`); im Hochformat steht alles untereinander. Nach einer Änderung der Ausrichtung in `app.config.ts` muss der native Build neu erzeugt werden (`npx expo prebuild --clean --platform ios`, dann `npx expo run:ios`).
+
 ## Funktionsweise
 
 ### Kurvenerkennung (`src/curves`, reines TS)
