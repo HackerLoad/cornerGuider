@@ -3,11 +3,11 @@
 Cross-Platform-App (iOS + Android) für Motorradfahrer. Sie zeigt und sagt während der Fahrt die **nächste Kurve** auf einer geplanten GPX-Route an – nur Kurven, keine Abbiegehinweise, keine Karte.
 
 - Oben: „In 240 m: Rechts 3"
-- Darunter: große Kurvengrafik, aus den echten Koordinaten gerendert, in Fahrtrichtung nach oben
+- Darunter: große Kurvengrafik, aus den echten Koordinaten gerendert, in Fahrtrichtung nach oben: zweispurige Straße mit Gegenspur und Mittellinie, der Kurvenabschnitt am Rand in der Farbe der Stufe und eine **Fahrlinie** in der eigenen Spur (außen – Scheitel innen – außen; der Scheitel liegt bei zugehenden Kurven später)
 - Darunter: die nächsten Kurven als kompakte Liste
 - Sprachansagen über Lautsprecher oder Bluetooth-Headset sind der Hauptkanal, das Display ergänzt
 
-> **Sicherheit:** Die Kurvendaten werden aus GPX-Dateien berechnet und können ungenau sein. Die App gibt keine Geschwindigkeitsempfehlung. Der tatsächliche Straßenverlauf hat immer Vorrang. Beim ersten Start muss ein Sicherheitshinweis bestätigt werden.
+> **Sicherheit:** Die Fahrlinie ist ein rein geometrischer Vorschlag innerhalb der eigenen Spur (Rechtsverkehr, Straße = Mittellinie der GPX-Route) und kein Fahrhinweis. Die Kurvendaten werden aus GPX-Dateien berechnet und können ungenau sein. Die App gibt keine Geschwindigkeitsempfehlung. Der tatsächliche Straßenverlauf hat immer Vorrang. Beim ersten Start muss ein Sicherheitshinweis bestätigt werden.
 
 ## Status
 

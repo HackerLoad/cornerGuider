@@ -9,6 +9,7 @@ export function SafetyNotice({ onAccept }: { onAccept: () => void }) {
         <Text style={styles.text}>• Die Kurvendaten werden aus GPX-Dateien berechnet und können ungenau oder falsch sein.</Text>
         <Text style={styles.text}>• cornerGuider gibt keine Geschwindigkeitsempfehlung. Die Kurvenstufe sagt nichts darüber aus, wie schnell du fahren kannst.</Text>
         <Text style={styles.text}>• Der tatsächliche Straßenverlauf, Sicht, Wetter, Fahrbahn und Verkehr haben immer Vorrang vor allen Anzeigen und Ansagen.</Text>
+        <Text style={styles.text}>• Die eingezeichnete Fahrlinie ist ein rein geometrischer Vorschlag innerhalb der eigenen Spur (Rechtsverkehr). Sie berücksichtigt weder Verkehr noch Fahrbahnzustand noch Sicht.</Text>
         <Text style={styles.text}>• Bediene das Gerät nicht während der Fahrt. Richte alles vor dem Losfahren ein.</Text>
       </ScrollView>
       <Pressable style={styles.button} onPress={onAccept}>
