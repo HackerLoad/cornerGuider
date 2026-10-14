@@ -171,3 +171,56 @@ describe('Freie Fahrt auf echten Strecken (Regressionsschutz, kein Gütesiegel)'
     expect(res.recall).toBeGreaterThanOrEqual(0.6);
   });
 });
+
+describe('Stabilität der Darstellung', () => {
+  it('dieselbe Kurve sieht bei jeder Aktualisierung gleich aus, der Fortschritt wächst', () => {
+    const track = new TrackBuilder().straight(300).arc('right', 80, 120).straight(400);
+    const graph = roadOf(track);
+    const xy = track.xy();
+    const engine = new FreerideEngine(graph);
+    const sigs = new Set<string>();
+    const progress: number[] = [];
+    const dists: number[] = [];
+    for (let i = 60; i < xy.length - 60; i += 7) {
+      const p = xy[i]!;
+      const st = engine.update(fixAt(p, bearing(xy[i - 1]!, xy[i + 1]!), 15, i * 1000));
+      const u = st.upcoming[0];
+      if (!u || u.curve.direction !== 'right') continue;
+      sigs.add(`${u.curve.grade}|${u.curve.shape}|${u.curve.minRadius.toFixed(3)}|${u.curve.geometry.length}`);
+      progress.push(u.progressM ?? NaN);
+      dists.push(u.distanceTo);
+    }
+    expect(progress.length).toBeGreaterThan(25);
+    expect(sigs.size).toBe(1);
+    for (let i = 1; i < progress.length; i++) expect(progress[i]!).toBeGreaterThanOrEqual(progress[i - 1]! - 0.5);
+    // vor der Kurve sinkt die Entfernung, in der Kurve bleibt sie 0
+    for (let i = 1; i < dists.length; i++) expect(dists[i]!).toBeLessThanOrEqual(dists[i - 1]! + 0.5);
+    expect(dists[dists.length - 1]).toBe(0);
+    expect(progress[0]!).toBeLessThan(0);
+    expect(progress[progress.length - 1]!).toBeGreaterThan(40);
+  });
+
+  it('auf echter Strecke (Amalfi) ändert keine Kurve ihre Stufe oder Form, solange sie angezeigt wird', () => {
+    const gpx = parseGpx(fx('amalfi-coast.gpx'));
+    const graph = new RoadGraph(gpx.points[0]!);
+    graph.addWays(parseOverpass(JSON.parse(fx('osm-amalfi.json'))));
+    const raw = gpx.points.map((p) => graph.projection.toXY(p));
+    const covered = cumulativeLengths(raw)[700]!;
+    const det = detectCurvesXY(raw, graph.projection.origin);
+    const engine = new FreerideEngine(graph);
+    const seen = new Map<string, Set<string>>();
+    for (let d = 40; d < covered - 100; d += 12) {
+      const i = Math.round(d / 5);
+      const p = det.path[i]!;
+      const heading = bearing(det.path[i - 1]!, det.path[i + 1]!);
+      const st = engine.update(fixAt(p, heading, 15, d * 1000, graph.projection.toLatLon));
+      const u = st.upcoming[0];
+      if (!u) continue;
+      const key = `${u.curve.startXY.x.toFixed(1)}_${u.curve.startXY.y.toFixed(1)}`;
+      const sig = `${u.curve.grade}|${u.curve.shape}|${u.curve.direction}|${u.curve.geometry.length}`;
+      (seen.get(key) ?? seen.set(key, new Set()).get(key)!).add(sig);
+    }
+    expect(seen.size).toBeGreaterThan(20);
+    for (const sigs of seen.values()) expect(sigs.size).toBe(1);
+  });
+});

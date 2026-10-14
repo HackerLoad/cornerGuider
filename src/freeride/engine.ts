@@ -2,6 +2,9 @@ import { bearing } from '../geo/angles';
 import { snapToPolyline } from '../geo/linearRef';
 import type { XY } from '../geo/types';
 import { detectCurvesXY } from '../curves';
+import { dist } from '../geo/polyline';
+import { DEFAULT_CURVE_CONFIG } from '../curves/config';
+import type { Curve } from '../curves';
 import { nextCurves, type UpcomingCurve } from '../tracking/nextCurves';
 import type { Fix } from '../tracking/routeTracker';
 import { matchPosition, type Match } from './mapMatch';
@@ -42,9 +45,20 @@ export const DEFAULT_ENGINE_CONFIG: EngineConfig = {
 };
 
 /** Sagt aus Position und Straßendaten die kommenden Kurven voraus (ohne geplante Route). */
+/** Zwei Erkennungen gelten als dieselbe Kurve, wenn Anfang oder Ende so nah beieinander liegen (m). */
+const SAME_CURVE_M = 25;
+/** Gemerkte Kurven weiter als dies vom Fahrer entfernt werden vergessen (m). */
+const FORGET_BEYOND_M = 1500;
+
 export class FreerideEngine {
   private prev: Match | null = null;
   private trail: XY[] = [];
+  /**
+   * Gemerkte Darstellung jeder Kurve. Der Pfad wird jede Sekunde neu berechnet (anderer Anfang, anderes
+   * 5-m-Raster), dadurch schwankten Radius, Stufe und Form leicht. Die erste vollständige Darstellung
+   * (mit Vor- und Nachlauf) wird deshalb festgehalten.
+   */
+  private known: Curve[] = [];
 
   constructor(
     readonly graph: RoadGraph,
@@ -54,6 +68,35 @@ export class FreerideEngine {
   reset(): void {
     this.prev = null;
     this.trail = [];
+    this.known = [];
+  }
+
+  private isFull(c: Curve): boolean {
+    const margin = Math.round(DEFAULT_CURVE_CONFIG.geometryMarginM / DEFAULT_CURVE_CONFIG.resampleStepM);
+    return c.geometryCurveStart >= margin && c.geometry.length - 1 - c.geometryCurveEnd >= margin;
+  }
+
+  /** Liefert die festgehaltene Darstellung dieser Kurve (oder merkt sie sich). */
+  private stabilize(fresh: Curve): Curve {
+    const i = this.known.findIndex(
+      (k) =>
+        k.direction === fresh.direction &&
+        (dist(k.startXY, fresh.startXY) <= SAME_CURVE_M || dist(k.endXY, fresh.endXY) <= SAME_CURVE_M),
+    );
+    if (i < 0) {
+      this.known.push(fresh);
+      return fresh;
+    }
+    const kept = this.known[i]!;
+    if (!this.isFull(kept) && this.isFull(fresh)) {
+      this.known[i] = fresh;
+      return fresh;
+    }
+    return kept;
+  }
+
+  private forgetFar(rider: XY): void {
+    if (this.known.length > 30) this.known = this.known.filter((k) => dist(k.startXY, rider) <= FORGET_BEYOND_M);
   }
 
   private headingOf(fix: Fix, xy: XY): number | null {
@@ -83,7 +126,13 @@ export class FreerideEngine {
       const det = detectCurvesXY(path.pts, this.graph.projection.origin);
       riderDist = snapToPolyline(match.point, det.path, det.dist).dist;
       const complete = det.curves.filter((c) => c.endDist < det.length - this.cfg.truncatedWithinM);
-      upcoming = nextCurves(complete, riderDist, this.cfg.upcomingCount);
+      this.forgetFar(match.point);
+      upcoming = nextCurves(complete, riderDist, this.cfg.upcomingCount).map((u) => {
+        // Darstellung festhalten, Entfernungen aber aus dem aktuellen Pfad bestimmen
+        const curve = this.stabilize(u.curve);
+        const s0 = snapToPolyline(curve.startXY, det.path, det.dist).dist;
+        return { curve, distanceTo: Math.max(0, s0 - riderDist), inside: s0 <= riderDist, progressM: riderDist - s0 };
+      });
     }
     return {
       status: match.confident ? 'ok' : 'uncertain',

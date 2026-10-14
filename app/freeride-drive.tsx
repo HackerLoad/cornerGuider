@@ -131,7 +131,7 @@ export default function FreerideDrive() {
       }
       graphic={({ width: w, height: h }) =>
         first && snap?.status === 'ok' ? (
-          <CurveGraphic curve={first.curve} width={w} height={h} progressM={snap.riderDist - first.curve.startDist} />
+          <CurveGraphic curve={first.curve} width={w} height={h} progressM={first.progressM} />
         ) : null
       }
       list={

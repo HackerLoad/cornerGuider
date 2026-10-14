@@ -5,6 +5,8 @@ export interface UpcomingCurve {
   /** Distanz entlang der Route bis zum Kurvenanfang (m); 0 wenn man schon drin ist */
   distanceTo: number;
   inside: boolean;
+  /** Wie weit der Fahrer schon in der Kurve ist (m, negativ = noch davor); falls bekannt */
+  progressM?: number;
 }
 
 /** Die nächsten `count` Kurven ab Position `dist` (inkl. der aktuellen, falls man drin ist). */
