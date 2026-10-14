@@ -61,7 +61,34 @@ describe('fetchRoads', () => {
     });
     expect(ways.length).toBeGreaterThan(0);
     expect(urls).toEqual(['https://a', 'https://b', 'https://a']);
-    expect(sleeps).toEqual([1000, 2000]);
+    expect(sleeps).toEqual([500, 1000]);
+  });
+
+  it('behandelt eine leere Antwort wie einen Fehler und fragt den nächsten Server', async () => {
+    const empty = { ok: true, status: 200, json: async () => ({ elements: [] }) } as Response;
+    const urls: string[] = [];
+    const responses = [empty, ok];
+    const fetchFn = jest.fn(async (url: string) => {
+      urls.push(url);
+      return responses.shift()!;
+    });
+    const ways = await fetchRoads(center, 1000, {
+      fetchFn: fetchFn as unknown as typeof fetch,
+      endpoints: ['https://a', 'https://b'],
+      sleep: noSleep,
+    });
+    expect(ways.length).toBeGreaterThan(0);
+    expect(urls).toEqual(['https://a', 'https://b']);
+  });
+
+  it('meldet ein Zeitlimit lesbar statt „Aborted"', async () => {
+    const abort = Object.assign(new Error('Aborted'), { name: 'AbortError' });
+    const fetchFn = jest.fn(async () => {
+      throw abort;
+    });
+    await expect(
+      fetchRoads(center, 1000, { fetchFn: fetchFn as unknown as typeof fetch, attempts: 2, sleep: noSleep }),
+    ).rejects.toThrow(/Zeitüberschreitung/);
   });
 
   it('wirft einen verständlichen Fehler nach allen Versuchen', async () => {
