@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "types": ["vite/client"]
+  },
+  "include": ["src", "../src/curves", "../src/geo", "../src/gpx", "../src/routes", "../src/tracking/nextCurves.ts", "../src/voice/phrases.ts", "../src/format.ts", "../src/settings.ts", "../src/theme.ts", "../src/components/curveGraphicMath.ts"]
+}
