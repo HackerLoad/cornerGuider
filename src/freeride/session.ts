@@ -3,6 +3,7 @@ import { dist } from '../geo/polyline';
 import type { LatLon, XY } from '../geo/types';
 import type { DriveSettings } from '../settings';
 import type { Fix } from '../tracking/routeTracker';
+import { announceSettingsFrom } from '../voice/announceScheduler';
 import { FreeAnnouncer } from '../voice/freeAnnouncer';
 import { FreerideEngine, type FreerideState } from './engine';
 import { fetchRoads as defaultFetchRoads } from './overpassClient';
@@ -152,7 +153,7 @@ export class FreerideSession {
     const state = engine.update(fix);
 
     const settings = this.o.getSettings();
-    this.announcer.setSettings({ leadSeconds: settings.leadSeconds, minLeadM: settings.minLeadM, minUsefulM: 30 });
+    this.announcer.setSettings(announceSettingsFrom(settings));
     const a = this.announcer.next(state.upcoming, fix.speed ?? 0, state.status === 'ok');
     if (a) {
       this.announcements.push({ t, text: a.text, curves: a.curves });

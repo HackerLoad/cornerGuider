@@ -10,6 +10,7 @@ import { cumulativeLengths } from '../../src/geo/polyline';
 import type { XY } from '../../src/geo/types';
 import { parseGpx } from '../../src/gpx/parseGpx';
 import type { Fix } from '../../src/tracking/routeTracker';
+import { DEFAULT_ANNOUNCE_SETTINGS } from '../../src/voice/announceScheduler';
 import { FreeAnnouncer } from '../../src/voice/freeAnnouncer';
 import { TrackBuilder } from '../curves/helpers';
 import { graphOf, proj, way } from './net';
@@ -222,5 +223,35 @@ describe('Stabilität der Darstellung', () => {
     }
     expect(seen.size).toBeGreaterThan(20);
     for (const sigs of seen.values()) expect(sigs.size).toBe(1);
+  });
+});
+
+describe('FreeAnnouncer: Filter für leichte Kurven', () => {
+  const track = new TrackBuilder()
+    .straight(300).arc('right', 40, 80).arc('left', 250, 40)
+    .straight(300).arc('right', 250, 40)
+    .straight(300).arc('left', 40, 80).straight(500);
+  const graph = roadOf(track);
+  const xy = track.xy();
+
+  function texts(minAnnounceGrade: number) {
+    const engine = new FreerideEngine(graph);
+    const ann = new FreeAnnouncer({ ...DEFAULT_ANNOUNCE_SETTINGS, minAnnounceGrade });
+    const out: string[] = [];
+    for (let i = 20; i < xy.length - 20; i += 15) {
+      const st = engine.update(fixAt(xy[i]!, bearing(xy[i - 1]!, xy[i + 1]!), 15, i * 1000));
+      const a = ann.next(st.upcoming, 15, st.status === 'ok');
+      if (a) out.push(a.text);
+    }
+    return out;
+  }
+
+  it('ab Stufe 4: die leichte Einzelkurve entfällt, die Folgekurve steht in der Ansage davor', () => {
+    const all = texts(6);
+    const filtered = texts(4);
+    expect(all).toHaveLength(3);
+    expect(filtered).toHaveLength(2);
+    expect(filtered[0]).toMatch(/Rechts 3.*danach links 6/);
+    expect(filtered[1]).toMatch(/Links 3/);
   });
 });

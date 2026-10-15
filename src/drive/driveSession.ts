@@ -2,7 +2,7 @@ import type { DriveSettings } from '../settings';
 import { gpsProfileForSpeed, sameProfile, type GpsProfile } from '../tracking/adaptiveGps';
 import { nextCurves, type UpcomingCurve } from '../tracking/nextCurves';
 import { RouteTracker, type Fix, type TrackStatus, type TrackerRoute } from '../tracking/routeTracker';
-import { AnnounceScheduler } from '../voice/announceScheduler';
+import { AnnounceScheduler, announceSettingsFrom } from '../voice/announceScheduler';
 import type { LocationSource } from './locationSource';
 
 export interface DriveSnapshot {
@@ -75,11 +75,7 @@ export class DriveSession {
       if (this.lastStatus !== 'finished') say('Ziel erreicht');
     } else if (st.status === 'onRoute') {
       if (this.lastStatus === 'offRoute') say('Wieder auf der Route');
-      this.scheduler.setSettings({
-        leadSeconds: settings.leadSeconds,
-        minLeadM: settings.minLeadM,
-        minUsefulM: 30,
-      });
+      this.scheduler.setSettings(announceSettingsFrom(settings));
       const a = this.scheduler.next(st.dist, st.speed);
       if (a) say(a.text);
     }

@@ -1,3 +1,10 @@
+export type AnnounceStyle = 'long' | 'short';
+export type VoiceLanguage = 'de' | 'en';
+export type Units = 'metric' | 'imperial';
+export type DriveSide = 'right' | 'left';
+export type OrientationMode = 'auto' | 'portrait' | 'landscape';
+
+/** Einstellungen, die die Ansagen beeinflussen (reines TS, wird auch von den Tests benutzt). */
 export interface DriveSettings {
   voiceEnabled: boolean;
   /** Vorwarnzeit in Sekunden */
@@ -6,6 +13,31 @@ export interface DriveSettings {
   minLeadM: number;
   /** Sprechgeschwindigkeit (1 = normal) */
   speechRate: number;
+  /**
+   * Kurven dieser Stufe und enger (1 = Spitzkehre) werden angesagt. Leichtere nur, wenn sie
+   * direkt auf eine angesagte Kurve folgen („…, danach links 5").
+   */
+  minAnnounceGrade: number;
+  /** long: „In 240 Metern Rechts 3, zieht zu"; short: „Rechts 3" */
+  announceStyle: AnnounceStyle;
+  /** „zieht zu" / „öffnet" mitsprechen (nur im langen Stil) */
+  announceShape: boolean;
+  voiceLanguage: VoiceLanguage;
+  /** Kennung der gewählten Systemstimme (null = Standardstimme der Sprache) */
+  voiceId: string | null;
+  /** Lautstärke der Sprachausgabe 0…1 */
+  volume: number;
+  units: Units;
+}
+
+/** Einstellungen der Anzeige. */
+export interface DisplaySettings {
+  /** Rechtsverkehr: eigene Spur rechts der Mittellinie */
+  driveSide: DriveSide;
+  showRidingLine: boolean;
+  /** Anzahl der Kurven in der Liste unter der Grafik */
+  listCount: number;
+  orientation: OrientationMode;
 }
 
 export const DEFAULT_DRIVE_SETTINGS: DriveSettings = {
@@ -13,4 +45,18 @@ export const DEFAULT_DRIVE_SETTINGS: DriveSettings = {
   leadSeconds: 6,
   minLeadM: 80,
   speechRate: 1,
+  minAnnounceGrade: 4,
+  announceStyle: 'long',
+  announceShape: true,
+  voiceLanguage: 'de',
+  voiceId: null,
+  volume: 1,
+  units: 'metric',
+};
+
+export const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = {
+  driveSide: 'right',
+  showRidingLine: true,
+  listCount: 4,
+  orientation: 'auto',
 };

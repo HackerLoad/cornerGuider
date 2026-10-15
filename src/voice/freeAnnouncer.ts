@@ -42,6 +42,10 @@ export class FreeAnnouncer {
       const u = upcoming[i]!;
       if (this.seen(u.curve.startXY)) continue;
       if (u.distanceTo > lead) return null;
+      if (u.curve.grade > this.settings.minAnnounceGrade && !u.inside) {
+        this.announced.push(u.curve.startXY); // leichte Kurve: nur in der Ansage der vorigen Kurve
+        continue;
+      }
       if (u.inside || u.distanceTo < this.settings.minUsefulM) {
         this.announced.push(u.curve.startXY); // zu spät, nicht mehr ansagen
         continue;
@@ -52,7 +56,7 @@ export class FreeAnnouncer {
       }
       this.announced.push(u.curve.startXY, ...followUps.map((f) => f.curve.startXY));
       return {
-        text: announcementText(u.curve, u.distanceTo, followUps.map((f) => f.curve)),
+        text: announcementText(u.curve, u.distanceTo, followUps.map((f) => f.curve), this.settings.phrase),
         curves: [u, ...followUps].map((x) => ({ start: x.curve.startXY, grade: x.curve.grade, direction: x.curve.direction })),
       };
     }
