@@ -5,6 +5,8 @@ import { nextCurves } from '../../src/tracking/nextCurves';
 import { announcementText } from '../../src/voice/phrases';
 import { colors } from '../../src/theme';
 import type { Units } from '../../src/settings';
+import { translate } from '../../src/i18n/translate';
+import { warningText } from '../../src/routes/warningText';
 import { curveSvg } from './curveSvg';
 import sampleGpx from '../../test/fixtures/stelvio.gpx?raw';
 
@@ -92,7 +94,7 @@ function renderLeft(): void {
     sum.innerHTML = '';
     return;
   }
-  for (const w of r.warnings) msg.innerHTML += `<div class="warn">⚠︎ ${esc(w)}</div>`;
+  for (const w of r.warnings) msg.innerHTML += `<div class="warn">⚠︎ ${esc(warningText(w, (k, p) => translate('de', k, p), (m) => formatDistance(m, state.units, 'de')))}</div>`;
   const u = state.units;
   const km = r.lengthM / 1000;
   const counts = [1, 2, 3, 4, 5, 6].map((g) => r.curves.filter((c) => c.grade === g).length);
