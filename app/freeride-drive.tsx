@@ -12,6 +12,8 @@ import { configureAudioSession } from '../src/services/audioSession';
 import { DeviceLocationSource } from '../src/services/deviceLocation';
 import { saveRecording } from '../src/services/freerideStorage';
 import { loadRoute } from '../src/services/routeStorage';
+import { liveInputFromFreeride } from '../src/liveActivity/mappers';
+import { endLiveActivity, updateLiveActivity } from '../src/services/liveActivity';
 import { speakWithSettings, stopSpeaking } from '../src/services/speech';
 import { currentDriveSettings, useSettingsStore } from '../src/stores/settingsStore';
 import { colors } from '../src/theme';
@@ -109,6 +111,12 @@ export default function FreerideDrive() {
       { text: 'Weiterfahren', style: 'cancel' },
       { text: 'Beenden', style: 'destructive', onPress: () => void finish() },
     ]);
+
+  // Live-Aktivität (Sperrbildschirm / Dynamic Island) mit der nächsten Kurve
+  useEffect(() => {
+    if (session) updateLiveActivity(liveInputFromFreeride(snap), units);
+  }, [snap, session, units]);
+  useEffect(() => endLiveActivity, []);
 
   if (error) {
     return (

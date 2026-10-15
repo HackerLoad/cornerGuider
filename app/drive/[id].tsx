@@ -11,6 +11,8 @@ import type { StoredRoute } from '../../src/routes/model';
 import { configureAudioSession } from '../../src/services/audioSession';
 import { DeviceLocationSource } from '../../src/services/deviceLocation';
 import { loadRoute } from '../../src/services/routeStorage';
+import { liveInputFromDrive } from '../../src/liveActivity/mappers';
+import { endLiveActivity, updateLiveActivity } from '../../src/services/liveActivity';
 import { speakWithSettings, stopSpeaking } from '../../src/services/speech';
 import { currentDriveSettings, useSettingsStore } from '../../src/stores/settingsStore';
 import { colors } from '../../src/theme';
@@ -85,6 +87,12 @@ export default function DriveScreen() {
       { text: 'Weiterfahren', style: 'cancel' },
       { text: 'Beenden', style: 'destructive', onPress: () => router.back() },
     ]);
+
+  // Live-Aktivität (Sperrbildschirm / Dynamic Island) mit der nächsten Kurve
+  useEffect(() => {
+    if (route) updateLiveActivity(liveInputFromDrive(snap), units);
+  }, [snap, route, units]);
+  useEffect(() => endLiveActivity, []);
 
   if (route === undefined) return <View style={styles.center}><ActivityIndicator color={colors.accent} /></View>;
   if (route === null) return <View style={styles.center}><Text style={styles.big}>Route nicht gefunden</Text></View>;

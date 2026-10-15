@@ -23,6 +23,7 @@
     "expo-file-system": "~19.0.24",
     "expo-keep-awake": "~15.0.8",
     "expo-linking": "~8.0.12",
+    "expo-live-activity": "^0.4.2",
     "expo-location": "~19.0.8",
     "expo-router": "~6.0.24",
     "expo-screen-orientation": "~9.0.9",

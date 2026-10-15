@@ -69,6 +69,8 @@ const config: ExpoConfig = {
   plugins: [
     'expo-router',
     'expo-dev-client',
+    './plugins/withLiveActivityFrequentUpdates',
+    'expo-live-activity',
     [
       'expo-location',
       {
