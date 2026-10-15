@@ -153,8 +153,8 @@ Ohne geplante Route sagt die App den Straßenverlauf aus **OpenStreetMap**-Daten
 
 | Strecke | Ansagen richtig | Kurven bis Stufe 4 erkannt |
 | --- | --- | --- |
-| Amalfi (6,6 km) | 99 % (73 von 74) | 93 % (67 von 72) |
-| Stelvio (5,9 km) | 89 % (33 von 37) | 71 % (24 von 34) |
+| Amalfi (6,6 km) | 99 % (76 von 77) | 97 % (70 von 72) |
+| Stelvio (5,9 km) | 85 % (33 von 39) | 71 % (24 von 34) |
 
 Das sind Entwicklungswerte mit dem GPX-Track als Wahrheit, **keine Aussage über echte Fahrten**. Bei Stelvio läuft der Track teils über Nebenstraßen, dort endet die Vorhersage oft an Kreuzungen (die App schweigt). Bekannte Schwächen:
 
