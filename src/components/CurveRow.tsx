@@ -1,9 +1,11 @@
 import { StyleSheet, Text, View } from 'react-native';
 import type { Curve } from '../curves';
-import { directionLabel, formatDistance, shapeLabel } from '../format';
+import { directionLabel, formatDistance, formatRadius, shapeLabel } from '../format';
+import { useUnits } from '../stores/settingsStore';
 import { colors } from '../theme';
 
 export function CurveRow({ curve }: { curve: Curve }) {
+  const units = useUnits();
   const shape = shapeLabel(curve.shape);
   return (
     <View style={[styles.row, curve.followsPrevious && styles.followUp]}>
@@ -16,14 +18,14 @@ export function CurveRow({ curve }: { curve: Curve }) {
           {shape ? <Text style={styles.muted}>  ·  {shape}</Text> : null}
         </Text>
         <Text style={styles.muted}>
-          R {Math.round(curve.minRadius)} m · {Math.round(curve.totalAngle)}° · {Math.round(curve.length)} m lang
+          {formatRadius(curve.minRadius, units)} · {Math.round(curve.totalAngle)}° · {formatDistance(curve.length, units)} lang
         </Text>
         {curve.followsPrevious && curve.gapToPrevious !== null ? (
-          <Text style={styles.sequence}>Folge: {Math.round(curve.gapToPrevious)} m nach der vorigen Kurve</Text>
+          <Text style={styles.sequence}>Folge: {formatDistance(curve.gapToPrevious, units)} nach der vorigen Kurve</Text>
         ) : null}
       </View>
       <View style={styles.dist}>
-        <Text style={styles.distText}>{formatDistance(curve.startDist)}</Text>
+        <Text style={styles.distText}>{formatDistance(curve.startDist, units)}</Text>
         <Text style={styles.muted}>ab Start</Text>
       </View>
     </View>

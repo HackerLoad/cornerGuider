@@ -6,13 +6,13 @@ import { CurveGraphic } from '../../src/components/CurveGraphic';
 import { DriveLayout } from '../../src/components/DriveLayout';
 import { DriveSession, type DriveSnapshot } from '../../src/drive/driveSession';
 import { SimulatedLocationSource } from '../../src/drive/simulator';
-import { directionLabel, formatDistance } from '../../src/format';
+import { directionLabel, formatDistance, formatSpeed } from '../../src/format';
 import type { StoredRoute } from '../../src/routes/model';
 import { configureAudioSession } from '../../src/services/audioSession';
 import { DeviceLocationSource } from '../../src/services/deviceLocation';
 import { loadRoute } from '../../src/services/routeStorage';
-import { speak, stopSpeaking } from '../../src/services/speech';
-import { currentDriveSettings } from '../../src/stores/settingsStore';
+import { speakWithSettings, stopSpeaking } from '../../src/services/speech';
+import { currentDriveSettings, useSettingsStore } from '../../src/stores/settingsStore';
 import { colors } from '../../src/theme';
 
 /** Kopfzeile: nie umbrechen, die Schrift schrumpft stattdessen, bis der Text in die Breite passt. */
@@ -29,6 +29,10 @@ function SimBtn({ label, onPress }: { label: string; onPress: () => void }) {
 export default function DriveScreen() {
   useKeepAwake();
   const { id, sim: simParam } = useLocalSearchParams<{ id: string; sim?: string }>();
+  const units = useSettingsStore((s) => s.units);
+  const driveSide = useSettingsStore((s) => s.driveSide);
+  const showRidingLine = useSettingsStore((s) => s.showRidingLine);
+  const listCount = useSettingsStore((s) => s.listCount);
   const isSim = simParam === '1';
   const [sim, setSim] = useState<SimulatedLocationSource | null>(null);
   const [, setSimTick] = useState(0); // erzwingt Neuzeichnen nach Änderungen am Simulator
@@ -59,7 +63,7 @@ export default function DriveScreen() {
         session = new DriveSession({
           route: r,
           source,
-          speak: (t) => speak(t, currentDriveSettings().speechRate),
+          speak: (t) => speakWithSettings(t),
           getSettings: currentDriveSettings,
         });
         unsub = session.subscribe(setSnap);
@@ -94,7 +98,7 @@ export default function DriveScreen() {
   }
 
   const first = snap?.upcoming[0];
-  const rest = snap?.upcoming.slice(1) ?? [];
+  const rest = snap?.upcoming.slice(1, 1 + listCount) ?? [];
 
   return (
     <DriveLayout
@@ -107,7 +111,7 @@ export default function DriveScreen() {
           <Text style={styles.big} {...ONE_LINE}>GPS wird gesucht …</Text>
         ) : first ? (
           <Text style={styles.big} {...ONE_LINE}>
-            {first.inside ? 'Jetzt' : `In ${formatDistance(Math.round(first.distanceTo / 10) * 10)}`}:{' '}
+            {first.inside ? 'Jetzt' : `In ${formatDistance(Math.round(first.distanceTo / 10) * 10, units)}`}:{' '}
             {directionLabel(first.curve.direction)} {first.curve.grade}
           </Text>
         ) : (
@@ -116,20 +120,20 @@ export default function DriveScreen() {
       }
       graphic={({ width: w, height: h }) =>
         first && snap?.status === 'onRoute' ? (
-          <CurveGraphic curve={first.curve} width={w} height={h} progressM={snap.dist - first.curve.startDist} />
+          <CurveGraphic curve={first.curve} width={w} height={h} progressM={snap.dist - first.curve.startDist} driveSide={driveSide} showLine={showRidingLine} />
         ) : null
       }
       list={rest.map((u) => (
         <View key={u.curve.index} style={styles.item}>
           <Text style={[styles.itemGrade, { color: colors.grade[u.curve.grade - 1] }]}>{u.curve.grade}</Text>
           <Text style={styles.itemText}>{directionLabel(u.curve.direction)}</Text>
-          <Text style={styles.itemDist}>in {formatDistance(Math.round(u.distanceTo / 10) * 10)}</Text>
+          <Text style={styles.itemDist}>in {formatDistance(Math.round(u.distanceTo / 10) * 10, units)}</Text>
         </View>
       ))}
       sim={
         sim ? (
           <View style={styles.simBar}>
-            <Text style={styles.simLabel}>SIMULATION {Math.round(sim.speedKmh)} km/h</Text>
+            <Text style={styles.simLabel}>SIMULATION {formatSpeed(sim.speedKmh / 3.6, units)}</Text>
             <View style={styles.simRow}>
               <SimBtn label="−10" onPress={() => { sim.setSpeedKmh(sim.speedKmh - 10); setSimTick((n) => n + 1); }} />
               <SimBtn label="+10" onPress={() => { sim.setSpeedKmh(sim.speedKmh + 10); setSimTick((n) => n + 1); }} />
@@ -146,7 +150,7 @@ export default function DriveScreen() {
       footer={
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            {snap ? `${Math.round(snap.speed * 3.6)} km/h · Rest ${formatDistance(snap.remaining)}` : ''}
+            {snap ? `${formatSpeed(snap.speed, units)} · Rest ${formatDistance(snap.remaining, units)}` : ''}
           </Text>
           <Pressable onPress={confirmStop} style={styles.stop}><Text style={styles.stopText}>Beenden</Text></Pressable>
         </View>

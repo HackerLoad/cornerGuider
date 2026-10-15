@@ -2,7 +2,8 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { evaluateRecording, type RecordingSummary } from '../../src/freeride/evaluateRecording';
-import { directionLabel, formatKm } from '../../src/format';
+import { directionLabel, formatKm, formatRadius } from '../../src/format';
+import { useUnits } from '../../src/stores/settingsStore';
 import { loadRecording } from '../../src/services/freerideStorage';
 import { colors } from '../../src/theme';
 
@@ -22,6 +23,7 @@ function Row({ label, value, note }: { label: string; value: string; note?: stri
 
 export default function FreerideResult() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const units = useUnits();
   const [state, setState] = useState<'loading' | 'missing' | 'short' | RecordingSummary>('loading');
 
   useEffect(() => {
@@ -45,7 +47,7 @@ export default function FreerideResult() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 16, gap: 10 }}>
       <Stack.Screen options={{ title: 'Auswertung' }} />
-      <Text style={styles.title}>{formatKm(r.distanceKm * 1000)} in {Math.round(r.durationMin)} min</Text>
+      <Text style={styles.title}>{formatKm(r.distanceKm * 1000, units)} in {Math.round(r.durationMin)} min</Text>
       <Text style={styles.note}>
         Verglichen werden die angesagten Kurven mit den Kurven der tatsächlich gefahrenen Spur (GPS, ca. alle 15 m).
         Anfang und Ende der Fahrt zählen nicht mit.
@@ -72,7 +74,7 @@ export default function FreerideResult() {
           <Text style={styles.section}>Nicht angesagt</Text>
           {e.missed.slice(0, 30).map((c, i) => (
             <Text key={i} style={styles.item}>
-              {directionLabel(c.direction)} {c.grade} · R {Math.round(c.minRadius)} m · bei {formatKm(c.startDist)}
+              {directionLabel(c.direction)} {c.grade} · {formatRadius(c.minRadius, units)} · bei {formatKm(c.startDist, units)}
             </Text>
           ))}
         </View>

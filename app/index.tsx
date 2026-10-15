@@ -4,9 +4,11 @@ import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View }
 import { formatKm } from '../src/format';
 import { pickAndImportGpx } from '../src/services/importer';
 import { useRoutesStore } from '../src/stores/routesStore';
+import { useUnits } from '../src/stores/settingsStore';
 import { colors } from '../src/theme';
 
 export default function Routes() {
+  const units = useUnits();
   const routes = useRoutesStore((s) => s.routes);
   const add = useRoutesStore((s) => s.add);
   const [busy, setBusy] = useState(false);
@@ -48,7 +50,7 @@ export default function Routes() {
             <Pressable style={styles.card}>
               <Text style={styles.name} numberOfLines={2}>{item.name}</Text>
               <Text style={styles.meta}>
-                {formatKm(item.lengthM)} · {item.curveCount} Kurven ·{' '}
+                {formatKm(item.lengthM, units)} · {item.curveCount} Kurven ·{' '}
                 {new Date(item.importedAt).toLocaleDateString('de-DE')}
               </Text>
             </Pressable>

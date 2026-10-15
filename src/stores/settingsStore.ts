@@ -40,6 +40,8 @@ export const useSettingsStore = create<SettingsState>()(
   ),
 );
 
+export const useUnits = () => useSettingsStore((s) => s.units);
+
 /** Aktuelle Ansage-Einstellungen (außerhalb von React, z. B. für die Sessions). */
 export function currentDriveSettings(): DriveSettings {
   const s = useSettingsStore.getState();
@@ -53,7 +55,6 @@ export function currentDriveSettings(): DriveSettings {
     announceShape: s.announceShape,
     voiceLanguage: s.voiceLanguage,
     voiceId: s.voiceId,
-    volume: s.volume,
     units: s.units,
   };
 }

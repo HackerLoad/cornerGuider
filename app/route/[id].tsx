@@ -6,10 +6,12 @@ import { formatKm } from '../../src/format';
 import type { StoredRoute } from '../../src/routes/model';
 import { loadRoute } from '../../src/services/routeStorage';
 import { useRoutesStore } from '../../src/stores/routesStore';
+import { useUnits } from '../../src/stores/settingsStore';
 import { colors } from '../../src/theme';
 
 export default function RouteOverview() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const units = useUnits();
   const remove = useRoutesStore((s) => s.remove);
   const [route, setRoute] = useState<StoredRoute | null | undefined>(undefined);
 
@@ -59,7 +61,7 @@ export default function RouteOverview() {
         ListHeaderComponent={
           <View style={{ marginBottom: 12 }}>
             <Text style={styles.summary}>
-              {formatKm(route.lengthM)} · {route.curves.length} Kurven
+              {formatKm(route.lengthM, units)} · {route.curves.length} Kurven
             </Text>
             {route.warnings.map((w) => (
               <Text key={w} style={styles.warning}>⚠︎ {w}</Text>

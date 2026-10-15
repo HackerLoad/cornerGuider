@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { SafetyNotice } from '../src/components/SafetyNotice';
 import '../src/services/locationTask';
+import { applyOrientation } from '../src/services/orientation';
 import { useSettingsStore } from '../src/stores/settingsStore';
 import { colors } from '../src/theme';
 
@@ -20,6 +21,10 @@ export default function RootLayout() {
   const hydrated = useHydrated();
   const accepted = useSettingsStore((s) => s.safetyAccepted);
   const acceptSafety = useSettingsStore((s) => s.acceptSafety);
+  const orientation = useSettingsStore((s) => s.orientation);
+  useEffect(() => {
+    if (hydrated) void applyOrientation(orientation);
+  }, [hydrated, orientation]);
 
   if (!hydrated) return null;
   if (!accepted) {

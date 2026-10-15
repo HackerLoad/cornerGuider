@@ -9,6 +9,10 @@ interface Props {
   height: number;
   /** Position des Fahrers relativ zum Kurvenanfang in m (negativ = noch davor) */
   progressM?: number;
+  /** Rechts- oder Linksverkehr (Seite der eigenen Spur), Standard rechts */
+  driveSide?: 'right' | 'left';
+  /** Fahrlinie zeichnen (Standard ja) */
+  showLine?: boolean;
 }
 
 const ASPHALT = '#262b31';
@@ -19,8 +23,8 @@ const LINE = '#00e5ff';
  * Zweispurige Straße in Fahrtrichtung (oben): eigene Spur rechts, Gegenspur links, gestrichelte
  * Mittellinie, Kurvenabschnitt am Rand in der Farbe der Stufe, dazu die Fahrlinie in der eigenen Spur.
  */
-export function CurveGraphic({ curve, width, height, progressM }: Props) {
-  const g = buildRoadGraphic(curve, width, height, 36, progressM);
+export function CurveGraphic({ curve, width, height, progressM, driveSide = 'right', showLine = true }: Props) {
+  const g = buildRoadGraphic(curve, width, height, 36, progressM, 5, driveSide);
   const color = colors.grade[curve.grade - 1];
   const w = g.roadWidth;
   return (
@@ -35,10 +39,14 @@ export function CurveGraphic({ curve, width, height, progressM }: Props) {
       <Path d={g.center} stroke="#e8e8e8" strokeWidth={2} strokeDasharray="10 9" strokeLinejoin="round" fill="none" />
       {/* Kurvenanfang */}
       <Line x1={g.start.x - w / 2} x2={g.start.x + w / 2} y1={g.start.y} y2={g.start.y} stroke={colors.text} strokeWidth={3} />
-      {/* Fahrlinie (mit dunkler Kontur) */}
-      <Path d={g.line} stroke="#000" strokeWidth={g.lineWidth + 3.5} strokeLinecap="round" strokeLinejoin="round" fill="none" opacity={0.6} />
-      <Path d={g.line} stroke={LINE} strokeWidth={g.lineWidth} strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      <Circle cx={g.rider.x} cy={g.rider.y} r={g.riderRadius} fill={LINE} stroke="#000" strokeWidth={2} />
+      {showLine ? (
+        <>
+        {/* Fahrlinie (mit dunkler Kontur) */}
+        <Path d={g.line} stroke="#000" strokeWidth={g.lineWidth + 3.5} strokeLinecap="round" strokeLinejoin="round" fill="none" opacity={0.6} />
+        <Path d={g.line} stroke={LINE} strokeWidth={g.lineWidth} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        <Circle cx={g.rider.x} cy={g.rider.y} r={g.riderRadius} fill={LINE} stroke="#000" strokeWidth={2} />
+        </>
+      ) : null}
       <SvgText x={g.numberAnchor.x} y={g.numberAnchor.y} fill={color} fontSize={96} fontWeight="900" textAnchor="middle">
         {curve.grade}
       </SvgText>

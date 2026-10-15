@@ -93,6 +93,7 @@ export function ridingLineOffsets(
   direction: Dir,
   shape: Shape,
   amplitude: number = LINE_AMPLITUDE,
+  laneCenter: number = OWN_LANE_CENTER,
 ): number[] {
   const inside = direction === 'left' ? 1 : -1; // Seite, zu der die Kurve biegt
   const tApex = apexPosition(shape);
@@ -108,7 +109,7 @@ export function ridingLineOffsets(
       const t = curveEnd === curveStart ? 0 : (i - curveStart) / (curveEnd - curveStart);
       p = t < tApex ? -Math.cos((Math.PI * t) / tApex) : Math.cos((Math.PI * (t - tApex)) / (1 - tApex));
     }
-    out.push(OWN_LANE_CENTER + inside * amplitude * p);
+    out.push(laneCenter + inside * amplitude * p);
   }
   return out;
 }
@@ -253,6 +254,7 @@ export function buildRoadGraphic(
   padding: number,
   progressM?: number,
   stepM = 5,
+  driveSide: 'right' | 'left' = 'right',
 ): RoadGraphic {
   const fit = fitGeometry(curve.geometry, curve.geometryCurveStart, curve.geometryCurveEnd, w, h, padding);
   const pts = fit.points;
@@ -267,6 +269,8 @@ export function buildRoadGraphic(
     curve.direction,
     curve.shape,
     curve.totalAngle === undefined ? LINE_AMPLITUDE : amplitudeForAngle(curve.totalAngle),
+    // Rechtsverkehr: eigene Spur rechts der Mittellinie (−0,5), Linksverkehr: links (+0,5)
+    driveSide === 'right' ? OWN_LANE_CENTER : -OWN_LANE_CENTER,
   );
   // Offsets sind in halben Straßenbreiten (±1 = Fahrbahnrand), daher Multiplikation mit half
   const raw = pts.map((p, i) => ({

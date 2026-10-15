@@ -6,19 +6,20 @@ import { CurveGraphic } from '../src/components/CurveGraphic';
 import { DriveLayout } from '../src/components/DriveLayout';
 import { SimulatedLocationSource } from '../src/drive/simulator';
 import { FreerideSession, type FreerideSnapshot } from '../src/freeride/session';
-import { directionLabel, formatDistance } from '../src/format';
+import { directionLabel, formatDistance, formatSpeed } from '../src/format';
+import type { Units } from '../src/settings';
 import { configureAudioSession } from '../src/services/audioSession';
 import { DeviceLocationSource } from '../src/services/deviceLocation';
 import { saveRecording } from '../src/services/freerideStorage';
 import { loadRoute } from '../src/services/routeStorage';
-import { speak, stopSpeaking } from '../src/services/speech';
-import { currentDriveSettings } from '../src/stores/settingsStore';
+import { speakWithSettings, stopSpeaking } from '../src/services/speech';
+import { currentDriveSettings, useSettingsStore } from '../src/stores/settingsStore';
 import { colors } from '../src/theme';
 
 /** Kopfzeile: nie umbrechen, die Schrift schrumpft stattdessen, bis der Text in die Breite passt. */
 const ONE_LINE = { numberOfLines: 1, adjustsFontSizeToFit: true, minimumFontScale: 0.4 } as const;
 
-function headline(s: FreerideSnapshot | null): { text: string; tone: 'normal' | 'warn' | 'bad' } {
+function headline(s: FreerideSnapshot | null, units: Units): { text: string; tone: 'normal' | 'warn' | 'bad' } {
   if (!s) return { text: 'GPS wird gesucht …', tone: 'normal' };
   if (s.data === 'error' && s.status === 'noRoad') return { text: 'Keine Straßendaten', tone: 'bad' };
   if (s.data === 'loading' && s.status === 'noRoad') return { text: 'Straßendaten laden …', tone: 'normal' };
@@ -28,19 +29,19 @@ function headline(s: FreerideSnapshot | null): { text: string; tone: 'normal' | 
   if (!first) return { text: 'Keine Kurve voraus', tone: 'normal' };
   const dir = `${directionLabel(first.curve.direction)} ${first.curve.grade}`;
   return {
-    text: first.inside ? `Jetzt: ${dir}` : `In ${formatDistance(Math.round(first.distanceTo / 10) * 10)}: ${dir}`,
+    text: first.inside ? `Jetzt: ${dir}` : `In ${formatDistance(Math.round(first.distanceTo / 10) * 10, units)}: ${dir}`,
     tone: 'normal',
   };
 }
 
-function roadLine(s: FreerideSnapshot | null): string {
+function roadLine(s: FreerideSnapshot | null, units: Units): string {
   if (!s || s.status === 'noRoad') return s?.dataError ? `Fehler: ${s.dataError}` : '';
   const name = [s.wayRef, s.wayName].filter(Boolean).join(' · ');
   const end =
     s.endReason === 'junction' || s.endReason === 'roundabout'
-      ? ` · ${s.endReason === 'junction' ? 'Kreuzung' : 'Kreisverkehr'} in ${formatDistance(Math.round(s.aheadM / 10) * 10)}`
+      ? ` · ${s.endReason === 'junction' ? 'Kreuzung' : 'Kreisverkehr'} in ${formatDistance(Math.round(s.aheadM / 10) * 10, units)}`
       : s.endReason === 'dataEnd'
-        ? ` · Datenende in ${formatDistance(Math.round(s.aheadM / 10) * 10)}`
+        ? ` · Datenende in ${formatDistance(Math.round(s.aheadM / 10) * 10, units)}`
         : '';
   return `${name}${end}`;
 }
@@ -48,6 +49,10 @@ function roadLine(s: FreerideSnapshot | null): string {
 export default function FreerideDrive() {
   useKeepAwake();
   const { sim: simRouteId } = useLocalSearchParams<{ sim?: string }>();
+  const units = useSettingsStore((s) => s.units);
+  const driveSide = useSettingsStore((s) => s.driveSide);
+  const showRidingLine = useSettingsStore((s) => s.showRidingLine);
+  const listCount = useSettingsStore((s) => s.listCount);
   const [snap, setSnap] = useState<FreerideSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [session, setSession] = useState<FreerideSession | null>(null);
@@ -71,7 +76,7 @@ export default function FreerideDrive() {
         } else {
           source = new DeviceLocationSource();
         }
-        s = new FreerideSession({ source, speak: (t) => speak(t, currentDriveSettings().speechRate), getSettings: currentDriveSettings });
+        s = new FreerideSession({ source, speak: (t) => speakWithSettings(t), getSettings: currentDriveSettings });
         if (cancelled) return;
         setSession(s);
         unsub = s.subscribe(setSnap);
@@ -115,9 +120,9 @@ export default function FreerideDrive() {
   }
   if (!session) return <View style={styles.center}><ActivityIndicator color={colors.accent} /></View>;
 
-  const head = headline(snap);
+  const head = headline(snap, units);
   const first = snap && snap.status !== 'noRoad' ? snap.upcoming[0] : undefined;
-  const rest = snap?.upcoming.slice(1) ?? [];
+  const rest = snap?.upcoming.slice(1, 1 + listCount) ?? [];
 
   return (
     <DriveLayout
@@ -126,12 +131,12 @@ export default function FreerideDrive() {
           <Text style={[styles.big, head.tone === 'bad' && { color: colors.danger }, head.tone === 'warn' && { color: colors.warn }]} {...ONE_LINE}>
             {head.text}
           </Text>
-          <Text style={styles.road} numberOfLines={1}>{roadLine(snap)}</Text>
+          <Text style={styles.road} numberOfLines={1}>{roadLine(snap, units)}</Text>
         </View>
       }
       graphic={({ width: w, height: h }) =>
         first && snap?.status === 'ok' ? (
-          <CurveGraphic curve={first.curve} width={w} height={h} progressM={first.progressM} />
+          <CurveGraphic curve={first.curve} width={w} height={h} progressM={first.progressM} driveSide={driveSide} showLine={showRidingLine} />
         ) : null
       }
       list={
@@ -140,7 +145,7 @@ export default function FreerideDrive() {
               <View key={`${u.curve.startXY.x.toFixed(0)}_${u.curve.startXY.y.toFixed(0)}`} style={styles.item}>
                 <Text style={[styles.itemGrade, { color: colors.grade[u.curve.grade - 1] }]}>{u.curve.grade}</Text>
                 <Text style={styles.itemText}>{directionLabel(u.curve.direction)}</Text>
-                <Text style={styles.itemDist}>in {formatDistance(Math.round(u.distanceTo / 10) * 10)}</Text>
+                <Text style={styles.itemDist}>in {formatDistance(Math.round(u.distanceTo / 10) * 10, units)}</Text>
               </View>
             ))
           : null
@@ -148,7 +153,7 @@ export default function FreerideDrive() {
       sim={
         sim ? (
           <View style={styles.simBar}>
-            <Text style={styles.simLabel}>SIMULATION {Math.round(sim.speedKmh)} km/h</Text>
+            <Text style={styles.simLabel}>SIMULATION {formatSpeed(sim.speedKmh / 3.6, units)}</Text>
             <View style={styles.simRow}>
               <SimBtn label="−10" onPress={() => { sim.setSpeedKmh(sim.speedKmh - 10); redraw((n) => n + 1); }} />
               <SimBtn label="+10" onPress={() => { sim.setSpeedKmh(sim.speedKmh + 10); redraw((n) => n + 1); }} />
@@ -161,7 +166,7 @@ export default function FreerideDrive() {
       footer={
         <View style={styles.footer}>
           <View>
-            <Text style={styles.footerText}>{snap ? `${Math.round(snap.speed * 3.6)} km/h` : ''}</Text>
+            <Text style={styles.footerText}>{snap ? formatSpeed(snap.speed, units) : ''}</Text>
             <Text style={styles.attribution}>© OpenStreetMap-Mitwirkende</Text>
           </View>
           <Pressable onPress={confirmStop} style={styles.stop}><Text style={styles.stopText}>Beenden</Text></Pressable>

@@ -25,8 +25,6 @@ export interface DriveSettings {
   voiceLanguage: VoiceLanguage;
   /** Kennung der gewählten Systemstimme (null = Standardstimme der Sprache) */
   voiceId: string | null;
-  /** Lautstärke der Sprachausgabe 0…1 */
-  volume: number;
   units: Units;
 }
 
@@ -35,7 +33,7 @@ export interface DisplaySettings {
   /** Rechtsverkehr: eigene Spur rechts der Mittellinie */
   driveSide: DriveSide;
   showRidingLine: boolean;
-  /** Anzahl der Kurven in der Liste unter der Grafik */
+  /** Anzahl der weiteren Kurven in der Liste unter der Grafik (0–4) */
   listCount: number;
   orientation: OrientationMode;
 }
@@ -50,13 +48,12 @@ export const DEFAULT_DRIVE_SETTINGS: DriveSettings = {
   announceShape: true,
   voiceLanguage: 'de',
   voiceId: null,
-  volume: 1,
   units: 'metric',
 };
 
 export const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = {
   driveSide: 'right',
   showRidingLine: true,
-  listCount: 4,
+  listCount: 3,
   orientation: 'auto',
 };

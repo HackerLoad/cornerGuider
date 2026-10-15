@@ -169,3 +169,28 @@ describe('Auslenkung und Pfade', () => {
     expect(toPath([{ x: 1, y: 2 }, { x: 3, y: 4 }])).toBe('M1.0 2.0 L3.0 4.0');
   });
 });
+
+describe('Linksverkehr', () => {
+  const c = detectCurves(new TrackBuilder().straight(100).arc('right', 60, 90).straight(100).latLon()).curves[0]!;
+
+  it('eigene Spur liegt links der Mittellinie, die Fahrlinie bleibt dort', () => {
+    const right = buildRoadGraphic(c, 360, 360, 30, undefined, 5, 'right');
+    const left = buildRoadGraphic(c, 360, 360, 30, undefined, 5, 'left');
+    const firstCenter = right.centerPts[0]!;
+    expect(right.rider.x).toBeGreaterThan(firstCenter.x);
+    expect(left.rider.x).toBeLessThan(firstCenter.x);
+    const half = left.roadWidth / 2;
+    for (const p of left.linePts) {
+      const d = distToPolyline(p, left.centerPts);
+      expect(d).toBeLessThanOrEqual(half + 0.5);
+      expect(d).toBeGreaterThanOrEqual(half * 0.2);
+    }
+  });
+
+  it('Offsets sind gespiegelt um die Mittellinie', () => {
+    const r = ridingLineOffsets(40, 10, 30, 'right', 'constant');
+    const l = ridingLineOffsets(40, 10, 30, 'right', 'constant', LINE_AMPLITUDE, -OWN_LANE_CENTER);
+    r.forEach((v, i) => expect(l[i]!).toBeCloseTo(-OWN_LANE_CENTER + (v - OWN_LANE_CENTER) * 1, 9));
+    expect(Math.max(...l)).toBeGreaterThan(0);
+  });
+});
