@@ -10,9 +10,12 @@ const config: ExpoConfig = {
   userInterfaceStyle: 'dark',
   ios: {
     bundleIdentifier: 'com.hackerload.cornerguider',
+    buildNumber: '1',
     supportsTablet: false,
     infoPlist: {
       UIBackgroundModes: ['location', 'audio'],
+      // Die App nutzt keine eigene Verschlüsselung (nur HTTPS des Systems): erspart die Exportnachfrage beim Upload
+      ITSAppUsesNonExemptEncryption: false,
       LSSupportsOpeningDocumentsInPlace: false,
       CFBundleDocumentTypes: [
         {
@@ -40,6 +43,7 @@ const config: ExpoConfig = {
   },
   android: {
     package: 'com.hackerload.cornerguider',
+    versionCode: 1,
     adaptiveIcon: {
       backgroundColor: '#000000',
       foregroundImage: './assets/android-icon-foreground.png',

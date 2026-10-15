@@ -20,11 +20,14 @@ MVP-Funktionen sind implementiert, aber **noch nicht auf einem Gerät getestet**
 | Tracker (Snapping, Off-Route, Latenzausgleich) | fertig, getestet |
 | Fahrmodus, Kurvengrafik, Sprachansagen, Hintergrund-Ortung | fertig, nicht auf Gerät getestet |
 | Simulationsmodus | fertig, getestet |
-| Freie Fahrt (OSM, Versuch) | Kern getestet, App-Oberfläche nicht auf Gerät geprüft |
+| Freie Fahrt (OSM, Versuch) | Kern getestet, Oberfläche im Simulator und bei einer kurzen Autofahrt geprüft |
+| Go-Startseite mit Tabs, Einstellungen, Querformat | fertig, im iOS-Simulator geprüft (Tabs/Einstellungen/Live-Aktivität noch nicht gesehen) |
+| Live-Aktivität (iOS) | Logik getestet, Build-Konfiguration erzeugt; auf Gerät/Simulator nicht gesehen |
+| Web-Demo (`web-demo/`) | fertig, im Browser geprüft |
 
 Bekannte offene Punkte:
 
-- **Musik ducken:** iOS-Audio-Session ist auf `duckOthers` gesetzt. Auf Android fordert `expo-speech` vermutlich keinen Audio-Fokus an – falls die Musik nicht leiser wird, ist ein kleines natives Modul nötig.
+- **Musik ducken:** iOS dämpft die Musik über `useApplicationAudioSession: false` von selbst. `expo-speech` fordert unter Android keinen Audio-Fokus an (im Quellcode bestätigt); deshalb hält dort ein stilles Audiosignal (`src/services/ducking.ts`) den Fokus, solange gesprochen wird. **Auf einem echten Gerät noch nicht geprüft**, Android wurde nie gebaut.
 - **Kurvenstufen:** Die Schwellwerte in `src/curves/config.ts` sind Schätzwerte und noch nicht an echten Fahrten kalibriert.
 - **Kurvengrafik:** Das Layout (v. a. die Position der Stufenzahl) ist noch nicht auf einem Gerät gesehen.
 - **Dateiimport:** Dateiauswahl, „Öffnen mit"/Teilen und iOS-Dokumenttyp sind noch nicht auf einem Gerät geprüft.
@@ -67,9 +70,35 @@ Gibt pro Kurve Start, Länge, Richtung, Stufe, Mindestradius, Winkel, Form (zieh
 
 Die Simulation nutzt dieselbe Fahrmodus-Logik wie die echte Fahrt (`DriveSession`), nur die Positionsquelle ist ausgetauscht.
 
+## Bedienung
+
+Drei Tabs: **Go** (großer Startknopf), **Strecken** (Import und Auswahl) und **Einstellungen**. Der Go-Knopf fährt die gewählte Strecke („Go-Strecke", wird beim Import automatisch gewählt) oder startet die **Freie Fahrt**; der Umschalter oben auf der Go-Seite wählt zwischen beiden. Die Simulation startet über „Simulation" auf der Go-Seite oder in der Streckenübersicht.
+
+## Einstellungen
+
+| Bereich | Einstellung |
+| --- | --- |
+| Ansagen | Sprache an/aus, **Ansagen ab Stufe** (leichtere Kurven nur, wenn sie direkt auf eine angesagte folgen), Stil ausführlich/kurz, Form („zieht zu"/„öffnet") ansagen, Vorwarnzeit, Mindestabstand |
+| Stimme | Ansagesprache (Deutsch/Englisch), Sprechtempo, Stimme aus den auf dem Gerät installierten, Test-Ansage |
+| Anzeige | Ausrichtung (automatisch/hoch/quer), Einheiten (km·m / mi·ft), Rechts-/Linksverkehr (Spur der Fahrlinie), Fahrlinie ein/aus, Anzahl weiterer Kurven in der Liste |
+
+Die Lautstärke der Ansagen richtet sich nach der Gerätelautstärke (ein eigener Regler wäre wirkungslos: `volume` von `expo-speech` gilt nur im Web).
+
+## Live-Aktivität (iOS)
+
+Die nächste Kurve erscheint auf dem Sperrbildschirm und in der Dynamic Island: Pfeil mit Stufenzahl in der Stufenfarbe, „Rechts 3 · In 240 m" und ein Fortschrittsbalken, der beim Näherkommen wächst (`expo-live-activity`, iOS 16.2+). Aktualisiert wird nur bei geänderter Anzeige und höchstens alle 2 s. Die Bilder erzeugt `scripts/make-live-activity-images.py` (je < 4 KB, Grenze von ActivityKit). In einem Build ohne das native Modul und unter Android passiert nichts. Braucht einen neuen nativen Build (`npx expo prebuild --clean --platform ios`).
+
+## Web-Demo
+
+`web-demo/` ist ein eigenes Vite-Projekt, das die Kernlogik der App direkt nutzt: GPX laden, Kurven ansehen, Fahrmodus-Vorschau mit Kurvengrafik abspielen. Läuft komplett im Browser, siehe `web-demo/README.md`.
+
+## Veröffentlichung
+
+Entwürfe und Checkliste unter `docs/release/` (Datenschutzerklärung, Store-Texte, Schritte für TestFlight und Play-Store-Test), `eas.json` mit den Build-Profilen. Das Briefing für die Website steht in `docs/website-brief.md`. Vieles hängt noch von offenen Entscheidungen ab.
+
 ## Ausrichtung
 
-Die App dreht sich mit dem Handy. Im **Querformat** (Handy quer am Lenker) zeigt der Fahrmodus links Kopfzeile, Kurvenliste und Knöpfe, rechts die große Kurvengrafik (`src/components/DriveLayout.tsx`); im Hochformat steht alles untereinander. Nach einer Änderung der Ausrichtung in `app.config.ts` muss der native Build neu erzeugt werden (`npx expo prebuild --clean --platform ios`, dann `npx expo run:ios`).
+Die App dreht sich mit dem Handy (oder bleibt fest hoch/quer, siehe Einstellungen). Im **Querformat** (Handy quer am Lenker) zeigt der Fahrmodus links Kopfzeile, Kurvenliste und Knöpfe, rechts die große Kurvengrafik (`src/components/DriveLayout.tsx`); im Hochformat steht alles untereinander. Nach einer Änderung der Ausrichtung in `app.config.ts` muss der native Build neu erzeugt werden (`npx expo prebuild --clean --platform ios`, dann `npx expo run:ios`).
 
 ## Funktionsweise
 
