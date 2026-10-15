@@ -24,6 +24,10 @@ MVP-Funktionen sind implementiert, aber **noch nicht auf einem Gerät getestet**
 | Go-Startseite mit Tabs, Einstellungen, Querformat | fertig, im iOS-Simulator geprüft (Tabs/Einstellungen/Live-Aktivität noch nicht gesehen) |
 | Live-Aktivität (iOS) | Logik getestet, Build-Konfiguration erzeugt; auf Gerät/Simulator nicht gesehen |
 | Web-Demo (`web-demo/`) | fertig, im Browser geprüft |
+| Englische Oberfläche (Sprache der App) | fertig, getestet (Schlüsselparität), im Simulator noch nicht gesehen |
+| Feedback (Falsch/Fehlt-Knöpfe, Bewertung der Ansagen, Export) | fertig, getestet, im Simulator noch nicht gesehen |
+| Freie Fahrt offline (Kachel-Speicher, Download pro Strecke, eigener Server) | fertig, Logik getestet, Kachelabfrage an echten Daten geprüft |
+| Splash-Screen, Android-Icons (inkl. Monochrom) | konfiguriert, Icons gerendert geprüft; auf Gerät nicht gesehen |
 
 Bekannte offene Punkte:
 
@@ -83,6 +87,21 @@ Drei Tabs: **Go** (großer Startknopf), **Strecken** (Import und Auswahl) und **
 | Anzeige | Ausrichtung (automatisch/hoch/quer), Einheiten (km·m / mi·ft), Rechts-/Linksverkehr (Spur der Fahrlinie), Fahrlinie ein/aus, Anzahl weiterer Kurven in der Liste |
 
 Die Lautstärke der Ansagen richtet sich nach der Gerätelautstärke (ein eigener Regler wäre wirkungslos: `volume` von `expo-speech` gilt nur im Web).
+
+## Sprache der App
+
+Deutsch und Englisch, einstellbar unter Einstellungen → Anzeige → „Sprache der App" (Standard: Gerätesprache). Die Texte stehen in `src/i18n/dictionary.ts`; der Compiler erzwingt, dass jeder deutsche Schlüssel auch auf Englisch existiert, ein Test prüft die Platzhalter. Die **Sprache der Ansagen** ist getrennt einstellbar. Fehler, Import-Hinweise, gesprochene Systemtexte und die Live-Aktivität folgen der jeweiligen Sprache. Die Web-Demo ist bisher nur deutsch.
+
+## Rückmeldungen (Feedback)
+
+- **Knöpfe im Fahrmodus** (Einstellungen → Rückmeldungen, standardmäßig aus): „Falsch" und „Fehlt", gedacht für den **Beifahrer**. Die Markierung merkt sich Position, Zeit und die aktuelle Kurve.
+- **Bewertung nach einer Freien Fahrt:** Jede angesagte Kurve lässt sich mit „Passt / Zu mild / Zu streng / Gab es nicht" bewerten. Ab 5 Bewertungen je Stufe und 40 % Abweichung erscheint ein Hinweis, dass die Schwellwerte angepasst werden könnten.
+- **Export** (iOS: Datei im Teilen-Menü, Android: Text): Fahrt als GPX (Markierungen als Wegpunkte) oder alle Rohdaten als JSON; alle Markierungen unter Einstellungen.
+- Alles bleibt auf dem Gerät, es gibt keinen Server. Auswertung der Daten ist Handarbeit: Die Kalibrierung der Stufen (`src/curves/config.ts`) und neue Testfälle entstehen aus den exportierten Dateien.
+
+## Freie Fahrt offline
+
+Die Straßendaten werden in **Kacheln** (Web-Mercator, Zoom 14, ca. 1,7 km) geladen und auf dem Gerät gespeichert (`osm/`, 30 Tage frisch; bei Netzfehler werden auch ältere Daten genutzt). In der Streckenübersicht lädt „Offline laden" alle Kacheln entlang einer Strecke vorab, damit die Freie Fahrt dort ohne Netz läuft. Gemessene Größen: Bergregion ~60 KB, Amalfi ~65 KB, Großstadt ~830 KB je Kachel. Unter Einstellungen → Straßendaten lässt sich ein **eigener Overpass-Server** eintragen (wird zuerst angefragt) und der Speicher leeren. Leere Kacheln (Wald, Wasser) werden erst akzeptiert, wenn zwei Server sie bestätigen.
 
 ## Live-Aktivität (iOS)
 

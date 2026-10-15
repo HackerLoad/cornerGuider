@@ -45,9 +45,10 @@ const config: ExpoConfig = {
     package: 'com.hackerload.cornerguider',
     versionCode: 1,
     adaptiveIcon: {
-      backgroundColor: '#000000',
+      // Farbe des dunklen Himmels im Logo (scripts/make-app-icons.py), damit der Rand der Vordergrundebene nicht auffällt
+      backgroundColor: '#10151a',
       foregroundImage: './assets/android-icon-foreground.png',
-      backgroundImage: './assets/android-icon-background.png',
+      monochromeImage: './assets/android-icon-monochrome.png',
     },
     intentFilters: [
       {
@@ -62,6 +63,12 @@ const config: ExpoConfig = {
         ],
       },
     ],
+    // Aus der Vorlage übernommene, nicht benötigte Rechte (im Play-Store-Review erklärungsbedürftig)
+    blockedPermissions: [
+      'android.permission.SYSTEM_ALERT_WINDOW',
+      'android.permission.READ_EXTERNAL_STORAGE',
+      'android.permission.WRITE_EXTERNAL_STORAGE',
+    ],
     permissions: [
       'ACCESS_FINE_LOCATION',
       'ACCESS_COARSE_LOCATION',
@@ -72,6 +79,16 @@ const config: ExpoConfig = {
   },
   plugins: [
     'expo-router',
+    [
+      'expo-splash-screen',
+      {
+        // Dunkles Ladebild mit dem Logo (kein weißer Blitz vor der dunklen Oberfläche)
+        backgroundColor: '#0b0d0f',
+        image: './assets/splash-icon.png',
+        imageWidth: 180,
+        resizeMode: 'contain',
+      },
+    ],
     'expo-dev-client',
     './plugins/withLiveActivityFrequentUpdates',
     'expo-live-activity',

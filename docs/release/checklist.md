@@ -32,7 +32,7 @@ Vieles hier hängt von Entscheidungen ab, die noch offen sind (Namen, Konten, Ze
 ## Noch offen im Projekt (siehe README)
 
 - Android wurde noch nie gebaut oder auf einem Gerät gestartet (Ducking der Musik, Hintergrund-Ortung ungeprüft)
-- Monochromes Android-Icon, Splash-Screen mit Logo
-- Englische Oberfläche (Ansagen gibt es schon auf Englisch)
-- Feedback-Formular für falsche/fehlende Kurven
-- Entscheidung, ob die Freie Fahrt in der ersten Version dabei ist (öffentliche Overpass-Server sind zeitweise überlastet; für einen Release ein eigener Server oder Offline-Daten)
+- Splash-Screen und Android-Icons sind konfiguriert, aber noch nicht auf einem Gerät gesehen
+- Feedback wird nur per Export weitergegeben (kein Server); die Auswertung ist Handarbeit
+- Android-Benachrichtigungsrecht (`POST_NOTIFICATIONS`, Android 13+) für die Dienst-Benachrichtigung wird noch nicht angefragt
+- Entscheidung, ob die Freie Fahrt in der ersten Version dabei ist (öffentliche Overpass-Server sind zeitweise überlastet; es gibt jetzt Offline-Kacheln und einen eigenen Server, die Last auf öffentlichen Servern bleibt aber ein Thema für den Release)
