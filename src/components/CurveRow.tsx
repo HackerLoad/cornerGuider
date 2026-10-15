@@ -1,12 +1,11 @@
 import { StyleSheet, Text, View } from 'react-native';
 import type { Curve } from '../curves';
-import { directionLabel, formatDistance, formatRadius, shapeLabel } from '../format';
-import { useUnits } from '../stores/settingsStore';
+import { useFormat } from '../i18n';
 import { colors } from '../theme';
 
 export function CurveRow({ curve }: { curve: Curve }) {
-  const units = useUnits();
-  const shape = shapeLabel(curve.shape);
+  const f = useFormat();
+  const shape = f.shape(curve.shape);
   return (
     <View style={[styles.row, curve.followsPrevious && styles.followUp]}>
       <View style={[styles.grade, { borderColor: colors.grade[curve.grade - 1] }]}>
@@ -14,19 +13,19 @@ export function CurveRow({ curve }: { curve: Curve }) {
       </View>
       <View style={styles.main}>
         <Text style={styles.title}>
-          {directionLabel(curve.direction)} {curve.grade}
+          {f.dir(curve.direction)} {curve.grade}
           {shape ? <Text style={styles.muted}>  ·  {shape}</Text> : null}
         </Text>
         <Text style={styles.muted}>
-          {formatRadius(curve.minRadius, units)} · {Math.round(curve.totalAngle)}° · {formatDistance(curve.length, units)} lang
+          {f.t('curve.details', { radius: f.radius(curve.minRadius), angle: Math.round(curve.totalAngle), length: f.dist(curve.length) })}
         </Text>
         {curve.followsPrevious && curve.gapToPrevious !== null ? (
-          <Text style={styles.sequence}>Folge: {formatDistance(curve.gapToPrevious, units)} nach der vorigen Kurve</Text>
+          <Text style={styles.sequence}>{f.t('curve.sequence', { gap: f.dist(curve.gapToPrevious) })}</Text>
         ) : null}
       </View>
       <View style={styles.dist}>
-        <Text style={styles.distText}>{formatDistance(curve.startDist, units)}</Text>
-        <Text style={styles.muted}>ab Start</Text>
+        <Text style={styles.distText}>{f.dist(curve.startDist)}</Text>
+        <Text style={styles.muted}>{f.t('curve.fromStart')}</Text>
       </View>
     </View>
   );

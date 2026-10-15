@@ -1,19 +1,21 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useFormat } from '../i18n';
 import { colors } from '../theme';
 
 export function SafetyNotice({ onAccept }: { onAccept: () => void }) {
+  const f = useFormat();
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Sicherheitshinweis</Text>
-        <Text style={styles.text}>• Die Kurvendaten werden aus GPX-Dateien berechnet und können ungenau oder falsch sein.</Text>
-        <Text style={styles.text}>• cornerGuider gibt keine Geschwindigkeitsempfehlung. Die Kurvenstufe sagt nichts darüber aus, wie schnell du fahren kannst.</Text>
-        <Text style={styles.text}>• Der tatsächliche Straßenverlauf, Sicht, Wetter, Fahrbahn und Verkehr haben immer Vorrang vor allen Anzeigen und Ansagen.</Text>
-        <Text style={styles.text}>• Die eingezeichnete Fahrlinie ist ein rein geometrischer Vorschlag innerhalb der eigenen Spur (Rechtsverkehr). Sie berücksichtigt weder Verkehr noch Fahrbahnzustand noch Sicht.</Text>
-        <Text style={styles.text}>• Bediene das Gerät nicht während der Fahrt. Richte alles vor dem Losfahren ein.</Text>
+        <Text style={styles.title}>{f.t('safety.title')}</Text>
+        <Text style={styles.text}>{f.t('safety.p1')}</Text>
+        <Text style={styles.text}>{f.t('safety.p2')}</Text>
+        <Text style={styles.text}>{f.t('safety.p3')}</Text>
+        <Text style={styles.text}>{f.t('safety.p4')}</Text>
+        <Text style={styles.text}>{f.t('safety.p5')}</Text>
       </ScrollView>
       <Pressable style={styles.button} onPress={onAccept}>
-        <Text style={styles.buttonText}>Verstanden</Text>
+        <Text style={styles.buttonText}>{f.t('safety.accept')}</Text>
       </Pressable>
     </View>
   );

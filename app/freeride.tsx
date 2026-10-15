@@ -2,35 +2,31 @@ import { Link, router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useFormat } from '../src/i18n';
 import { listRecordings, type RecordingInfo } from '../src/services/freerideStorage';
 import { useRoutesStore } from '../src/stores/routesStore';
 import { colors } from '../src/theme';
 
 /** Startseite der Freien Fahrt (Versuch): ohne geplante Route, Straßenverlauf aus OpenStreetMap. */
 export default function FreerideStart() {
+  const f = useFormat();
   const routes = useRoutesStore((s) => s.routes);
   const [recordings, setRecordings] = useState<RecordingInfo[]>([]);
   useFocusEffect(useCallback(() => setRecordings(listRecordings()), []));
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 16, gap: 12 }}>
-      <Text style={styles.title}>Freie Fahrt (Versuch)</Text>
-      <Text style={styles.text}>
-        Ohne geplante Route: Die App sagt den Straßenverlauf aus OpenStreetMap-Daten voraus und meldet die Kurven davor.
-        Das ist eine Vorhersage und kann an Kreuzungen falsch sein – dort schweigt die App.
-      </Text>
-      <Text style={styles.text}>
-        Braucht Internet (die Straßendaten werden beim Fahren geladen). Die Fahrt wird aufgezeichnet und danach mit der
-        tatsächlich gefahrenen Spur verglichen.
-      </Text>
+      <Text style={styles.title}>{f.t('free.title')}</Text>
+      <Text style={styles.text}>{f.t('free.text1')}</Text>
+      <Text style={styles.text}>{f.t('free.text2')}</Text>
 
       <Pressable style={styles.button} onPress={() => router.push('/freeride-drive')}>
-        <Text style={styles.buttonText}>Fahrt starten (GPS)</Text>
+        <Text style={styles.buttonText}>{f.t('free.start')}</Text>
       </Pressable>
 
       {routes.length > 0 ? (
         <View style={{ gap: 8 }}>
-          <Text style={styles.section}>Simulation entlang einer importierten Route</Text>
+          <Text style={styles.section}>{f.t('free.simSection')}</Text>
           {routes.map((r) => (
             <Pressable
               key={r.id}
@@ -38,26 +34,26 @@ export default function FreerideStart() {
               onPress={() => router.push({ pathname: '/freeride-drive', params: { sim: r.id } })}
             >
               <Text style={styles.cardTitle} numberOfLines={1}>{r.name}</Text>
-              <Text style={styles.muted}>Fahrt mit simuliertem GPS, Straßendaten kommen echt aus OpenStreetMap</Text>
+              <Text style={styles.muted}>{f.t('free.simDesc')}</Text>
             </Pressable>
           ))}
         </View>
       ) : null}
 
       <View style={{ gap: 8 }}>
-        <Text style={styles.section}>Aufzeichnungen</Text>
-        {recordings.length === 0 ? <Text style={styles.muted}>Noch keine Fahrt aufgezeichnet.</Text> : null}
+        <Text style={styles.section}>{f.t('free.recordings')}</Text>
+        {recordings.length === 0 ? <Text style={styles.muted}>{f.t('free.noRecordings')}</Text> : null}
         {recordings.map((r) => (
           <Link key={r.id} href={{ pathname: '/freeride-result/[id]', params: { id: r.id } }} asChild>
             <Pressable style={styles.card}>
-              <Text style={styles.cardTitle}>{new Date(r.startedAt).toLocaleString('de-DE')}</Text>
-              <Text style={styles.muted}>Auswertung ansehen</Text>
+              <Text style={styles.cardTitle}>{new Date(r.startedAt).toLocaleString(f.lang === 'de' ? 'de-DE' : 'en-GB')}</Text>
+              <Text style={styles.muted}>{f.t('free.viewResult')}</Text>
             </Pressable>
           </Link>
         ))}
       </View>
 
-      <Text style={styles.attribution}>Straßendaten © OpenStreetMap-Mitwirkende (ODbL)</Text>
+      <Text style={styles.attribution}>{f.t('free.attribution')}</Text>
     </ScrollView>
   );
 }

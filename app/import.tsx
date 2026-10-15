@@ -1,6 +1,8 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { errorMessage } from '../src/errors';
+import { useFormat } from '../src/i18n';
 import { importGpxFromUri } from '../src/services/importer';
 import { useRoutesStore } from '../src/stores/routesStore';
 import { colors } from '../src/theme';
@@ -9,6 +11,7 @@ import { colors } from '../src/theme';
 export default function ImportScreen() {
   const { uri } = useLocalSearchParams<{ uri?: string }>();
   const add = useRoutesStore((s) => s.add);
+  const f = useFormat();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -20,7 +23,7 @@ export default function ImportScreen() {
         add(summary);
         router.replace({ pathname: '/route/[id]', params: { id: summary.id } });
       })
-      .catch((e) => !cancelled && setError(e instanceof Error ? e.message : String(e)));
+      .catch((e) => !cancelled && setError(errorMessage(e, f.lang)));
     return () => {
       cancelled = true;
     };
@@ -30,16 +33,16 @@ export default function ImportScreen() {
     <View style={styles.container}>
       {error ? (
         <>
-          <Text style={styles.error}>Import fehlgeschlagen</Text>
+          <Text style={styles.error}>{f.t('import.failed')}</Text>
           <Text style={styles.text}>{error}</Text>
           <Pressable style={styles.button} onPress={() => router.replace('/routes')}>
-            <Text style={styles.buttonText}>Zur Routenliste</Text>
+            <Text style={styles.buttonText}>{f.t('import.toRoutes')}</Text>
           </Pressable>
         </>
       ) : (
         <>
           <ActivityIndicator color={colors.accent} size="large" />
-          <Text style={styles.text}>Kurven werden berechnet …</Text>
+          <Text style={styles.text}>{f.t('import.calculating')}</Text>
         </>
       )}
     </View>

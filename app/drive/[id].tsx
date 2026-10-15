@@ -6,7 +6,8 @@ import { CurveGraphic } from '../../src/components/CurveGraphic';
 import { DriveLayout } from '../../src/components/DriveLayout';
 import { DriveSession, type DriveSnapshot } from '../../src/drive/driveSession';
 import { SimulatedLocationSource } from '../../src/drive/simulator';
-import { directionLabel, formatDistance, formatSpeed } from '../../src/format';
+import { errorMessage } from '../../src/errors';
+import { useFormat } from '../../src/i18n';
 import type { StoredRoute } from '../../src/routes/model';
 import { configureAudioSession } from '../../src/services/audioSession';
 import { DeviceLocationSource } from '../../src/services/deviceLocation';
@@ -31,7 +32,8 @@ function SimBtn({ label, onPress }: { label: string; onPress: () => void }) {
 export default function DriveScreen() {
   useKeepAwake();
   const { id, sim: simParam } = useLocalSearchParams<{ id: string; sim?: string }>();
-  const units = useSettingsStore((s) => s.units);
+  const f = useFormat();
+  const units = f.units;
   const driveSide = useSettingsStore((s) => s.driveSide);
   const showRidingLine = useSettingsStore((s) => s.showRidingLine);
   const listCount = useSettingsStore((s) => s.listCount);
@@ -71,7 +73,7 @@ export default function DriveScreen() {
         unsub = session.subscribe(setSnap);
         await session.start();
       } catch (e) {
-        setError(e instanceof Error ? e.message : String(e));
+        setError(errorMessage(e, f.lang));
       }
     })();
     return () => {
@@ -83,24 +85,24 @@ export default function DriveScreen() {
   }, [id, isSim]);
 
   const confirmStop = () =>
-    Alert.alert('Fahrt beenden?', undefined, [
-      { text: 'Weiterfahren', style: 'cancel' },
-      { text: 'Beenden', style: 'destructive', onPress: () => router.back() },
+    Alert.alert(f.t('drive.endTitle'), undefined, [
+      { text: f.t('drive.continue'), style: 'cancel' },
+      { text: f.t('drive.end'), style: 'destructive', onPress: () => router.back() },
     ]);
 
   // Live-Aktivität (Sperrbildschirm / Dynamic Island) mit der nächsten Kurve
   useEffect(() => {
-    if (route) updateLiveActivity(liveInputFromDrive(snap), units);
-  }, [snap, route, units]);
+    if (route) updateLiveActivity(liveInputFromDrive(snap), units, f.lang);
+  }, [snap, route, units, f.lang]);
   useEffect(() => endLiveActivity, []);
 
   if (route === undefined) return <View style={styles.center}><ActivityIndicator color={colors.accent} /></View>;
-  if (route === null) return <View style={styles.center}><Text style={styles.big}>Route nicht gefunden</Text></View>;
+  if (route === null) return <View style={styles.center}><Text style={styles.big}>{f.t('drive.notFound')}</Text></View>;
   if (error) {
     return (
       <View style={styles.center}>
         <Text style={styles.alert}>{error}</Text>
-        <Pressable style={styles.stop} onPress={() => router.back()}><Text style={styles.stopText}>Zurück</Text></Pressable>
+        <Pressable style={styles.stop} onPress={() => router.back()}><Text style={styles.stopText}>{f.t('drive.back')}</Text></Pressable>
       </View>
     );
   }
@@ -112,18 +114,18 @@ export default function DriveScreen() {
     <DriveLayout
       header={
         snap?.status === 'offRoute' ? (
-          <Text style={styles.alert} {...ONE_LINE}>ABSEITS DER ROUTE</Text>
+          <Text style={styles.alert} {...ONE_LINE}>{f.t('drive.offRoute')}</Text>
         ) : snap?.status === 'finished' ? (
-          <Text style={styles.big} {...ONE_LINE}>Ziel erreicht</Text>
+          <Text style={styles.big} {...ONE_LINE}>{f.t('drive.finished')}</Text>
         ) : !snap || snap.status === 'acquiring' ? (
-          <Text style={styles.big} {...ONE_LINE}>GPS wird gesucht …</Text>
+          <Text style={styles.big} {...ONE_LINE}>{f.t('drive.searching')}</Text>
         ) : first ? (
           <Text style={styles.big} {...ONE_LINE}>
-            {first.inside ? 'Jetzt' : `In ${formatDistance(Math.round(first.distanceTo / 10) * 10, units)}`}:{' '}
-            {directionLabel(first.curve.direction)} {first.curve.grade}
+            {first.inside ? f.t('drive.now') : f.t('drive.in', { distance: f.dist(Math.round(first.distanceTo / 10) * 10) })}:{' '}
+            {f.dir(first.curve.direction)} {first.curve.grade}
           </Text>
         ) : (
-          <Text style={styles.big} {...ONE_LINE}>Keine Kurven mehr</Text>
+          <Text style={styles.big} {...ONE_LINE}>{f.t('drive.noMore')}</Text>
         )
       }
       graphic={({ width: w, height: h }) =>
@@ -134,21 +136,21 @@ export default function DriveScreen() {
       list={rest.map((u) => (
         <View key={u.curve.index} style={styles.item}>
           <Text style={[styles.itemGrade, { color: colors.grade[u.curve.grade - 1] }]}>{u.curve.grade}</Text>
-          <Text style={styles.itemText}>{directionLabel(u.curve.direction)}</Text>
-          <Text style={styles.itemDist}>in {formatDistance(Math.round(u.distanceTo / 10) * 10, units)}</Text>
+          <Text style={styles.itemText}>{f.dir(u.curve.direction)}</Text>
+          <Text style={styles.itemDist}>{f.t('drive.in', { distance: f.dist(Math.round(u.distanceTo / 10) * 10) }).toLowerCase()}</Text>
         </View>
       ))}
       sim={
         sim ? (
           <View style={styles.simBar}>
-            <Text style={styles.simLabel}>SIMULATION {formatSpeed(sim.speedKmh / 3.6, units)}</Text>
+            <Text style={styles.simLabel}>{f.t('sim.label', { speed: f.speed(sim.speedKmh / 3.6) })}</Text>
             <View style={styles.simRow}>
               <SimBtn label="−10" onPress={() => { sim.setSpeedKmh(sim.speedKmh - 10); setSimTick((n) => n + 1); }} />
               <SimBtn label="+10" onPress={() => { sim.setSpeedKmh(sim.speedKmh + 10); setSimTick((n) => n + 1); }} />
-              <SimBtn label={sim.isPaused ? 'Weiter' : 'Pause'} onPress={() => { sim.setPaused(!sim.isPaused); setSimTick((n) => n + 1); }} />
+              <SimBtn label={sim.isPaused ? f.t('sim.resume') : f.t('sim.pause')} onPress={() => { sim.setPaused(!sim.isPaused); setSimTick((n) => n + 1); }} />
               <SimBtn label="+500 m" onPress={() => sim.jump(500)} />
               <SimBtn
-                label={offsetOn ? 'Zurück' : 'Abweichen'}
+                label={offsetOn ? f.t('sim.return') : f.t('sim.detour')}
                 onPress={() => { sim.setSideOffset(offsetOn ? 0 : 120); setOffsetOn(!offsetOn); }}
               />
             </View>
@@ -158,9 +160,9 @@ export default function DriveScreen() {
       footer={
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            {snap ? `${formatSpeed(snap.speed, units)} · Rest ${formatDistance(snap.remaining, units)}` : ''}
+            {snap ? f.t('drive.speedRest', { speed: f.speed(snap.speed), rest: f.dist(snap.remaining) }) : ''}
           </Text>
-          <Pressable onPress={confirmStop} style={styles.stop}><Text style={styles.stopText}>Beenden</Text></Pressable>
+          <Pressable onPress={confirmStop} style={styles.stop}><Text style={styles.stopText}>{f.t('drive.end')}</Text></Pressable>
         </View>
       }
     />

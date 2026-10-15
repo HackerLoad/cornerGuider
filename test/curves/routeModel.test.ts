@@ -20,7 +20,7 @@ describe('buildStoredRoute', () => {
   it('warnt bei spärlichen Punkten', () => {
     const gpx = `<gpx><rte><name>R</name><rtept lat="47" lon="11"/><rtept lat="47.05" lon="11.05"/><rtept lat="47.1" lon="11"/></rte></gpx>`;
     const r = buildStoredRoute(gpx, 'x');
-    expect(r.warnings.some((w) => w.includes('wenige Punkte'))).toBe(true);
+    expect(r.warnings.some((w) => typeof w !== 'string' && w.code === 'sparse')).toBe(true);
   });
 
   it('nutzt den Fallback-Namen ohne Namen in der Datei', () => {

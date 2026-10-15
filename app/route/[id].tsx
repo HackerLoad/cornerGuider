@@ -2,16 +2,17 @@ import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { CurveRow } from '../../src/components/CurveRow';
-import { formatKm } from '../../src/format';
+import { useFormat } from '../../src/i18n';
+import { warningText } from '../../src/routes/warningText';
 import type { StoredRoute } from '../../src/routes/model';
 import { loadRoute } from '../../src/services/routeStorage';
 import { useRoutesStore } from '../../src/stores/routesStore';
-import { useSettingsStore, useUnits } from '../../src/stores/settingsStore';
+import { useSettingsStore } from '../../src/stores/settingsStore';
 import { colors } from '../../src/theme';
 
 export default function RouteOverview() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const units = useUnits();
+  const f = useFormat();
   const setSettings = useSettingsStore((s) => s.set);
   const activeId = useSettingsStore((s) => s.activeRouteId);
   const remove = useRoutesStore((s) => s.remove);
@@ -35,16 +36,16 @@ export default function RouteOverview() {
   if (route === null) {
     return (
       <View style={styles.center}>
-        <Text style={styles.muted}>Route nicht gefunden.</Text>
+        <Text style={styles.muted}>{f.t('route.notFound')}</Text>
       </View>
     );
   }
 
   const confirmDelete = () =>
-    Alert.alert('Route löschen?', route.name, [
-      { text: 'Abbrechen', style: 'cancel' },
+    Alert.alert(f.t('route.deleteTitle'), route.name, [
+      { text: f.t('common.cancel'), style: 'cancel' },
       {
-        text: 'Löschen',
+        text: f.t('common.delete'),
         style: 'destructive',
         onPress: () => {
           remove(route.id);
@@ -63,39 +64,39 @@ export default function RouteOverview() {
         ListHeaderComponent={
           <View style={{ marginBottom: 12 }}>
             <Text style={styles.summary}>
-              {formatKm(route.lengthM, units)} · {route.curves.length} Kurven
+              {f.km(route.lengthM)} · {f.tn(route.curves.length)}
             </Text>
-            {route.warnings.map((w) => (
-              <Text key={w} style={styles.warning}>⚠︎ {w}</Text>
+            {route.warnings.map((w, i) => (
+              <Text key={i} style={styles.warning}>⚠︎ {warningText(w, f.t, f.dist)}</Text>
             ))}
             <Pressable
               style={styles.button}
               onPress={() => router.push({ pathname: '/drive/[id]', params: { id: route.id } })}
             >
-              <Text style={styles.buttonText}>Fahrt starten</Text>
+              <Text style={styles.buttonText}>{f.t('route.start')}</Text>
             </Pressable>
             {activeId !== route.id ? (
               <Pressable
                 style={[styles.button, styles.secondary]}
                 onPress={() => setSettings({ activeRouteId: route.id, goMode: 'route' })}
               >
-                <Text style={[styles.buttonText, { color: colors.accent }]}>Als Go-Strecke wählen</Text>
+                <Text style={[styles.buttonText, { color: colors.accent }]}>{f.t('route.makeGo')}</Text>
               </Pressable>
             ) : (
-              <Text style={styles.goInfo}>Diese Strecke fährt der Go-Knopf.</Text>
+              <Text style={styles.goInfo}>{f.t('route.isGo')}</Text>
             )}
             <Pressable
               style={[styles.button, styles.secondary]}
               onPress={() => router.push({ pathname: '/drive/[id]', params: { id: route.id, sim: '1' } })}
             >
-              <Text style={[styles.buttonText, { color: colors.accent }]}>Simulation starten</Text>
+              <Text style={[styles.buttonText, { color: colors.accent }]}>{f.t('route.simulate')}</Text>
             </Pressable>
           </View>
         }
         renderItem={({ item }) => <CurveRow curve={item} />}
         ListFooterComponent={
           <Pressable onPress={confirmDelete} style={{ paddingVertical: 20 }}>
-            <Text style={styles.delete}>Route löschen</Text>
+            <Text style={styles.delete}>{f.t('route.delete')}</Text>
           </Pressable>
         }
       />

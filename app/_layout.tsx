@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { SafetyNotice } from '../src/components/SafetyNotice';
 import '../src/services/locationTask';
+import { useFormat } from '../src/i18n';
 import { applyOrientation } from '../src/services/orientation';
 import { useSettingsStore } from '../src/stores/settingsStore';
 import { colors } from '../src/theme';
@@ -19,6 +20,7 @@ function useHydrated(): boolean {
 
 export default function RootLayout() {
   const hydrated = useHydrated();
+  const f = useFormat();
   const accepted = useSettingsStore((s) => s.safetyAccepted);
   const acceptSafety = useSettingsStore((s) => s.acceptSafety);
   const orientation = useSettingsStore((s) => s.orientation);
@@ -47,12 +49,12 @@ export default function RootLayout() {
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="import" options={{ title: 'Import', presentation: 'modal' }} />
-        <Stack.Screen name="route/[id]" options={{ title: 'Route' }} />
+        <Stack.Screen name="import" options={{ title: f.t('import.title'), presentation: 'modal' }} />
+        <Stack.Screen name="route/[id]" options={{ title: f.t('route.title') }} />
         <Stack.Screen name="drive/[id]" options={{ headerShown: false, gestureEnabled: false }} />
-        <Stack.Screen name="freeride" options={{ title: 'Freie Fahrt' }} />
+        <Stack.Screen name="freeride" options={{ title: f.t('go.modeFree') }} />
         <Stack.Screen name="freeride-drive" options={{ headerShown: false, gestureEnabled: false }} />
-        <Stack.Screen name="freeride-result/[id]" options={{ title: 'Auswertung' }} />
+        <Stack.Screen name="freeride-result/[id]" options={{ title: f.t('result.title') }} />
       </Stack>
     </>
   );

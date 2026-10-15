@@ -73,6 +73,15 @@ export function announcementText(
   return `${head}, ${w.then} ${tail.join(`, ${w.then} `)}`;
 }
 
+/** Kurze Systemansagen (Abweichung, Rückkehr, Ziel) in der Ansagesprache. */
+export function systemPhrase(kind: 'offRoute' | 'backOnRoute' | 'finished', language: VoiceLanguage): string {
+  const texts = {
+    de: { offRoute: 'Abseits der Route', backOnRoute: 'Wieder auf der Route', finished: 'Ziel erreicht' },
+    en: { offRoute: 'Off route', backOnRoute: 'Back on route', finished: 'Destination reached' },
+  } as const;
+  return texts[language][kind];
+}
+
 /** Beispielansage für den Test-Knopf in den Einstellungen. */
 export function exampleAnnouncement(opts: PhraseOptions): string {
   return announcementText(

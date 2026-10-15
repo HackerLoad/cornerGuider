@@ -3,6 +3,7 @@ import { gpsProfileForSpeed, sameProfile, type GpsProfile } from '../tracking/ad
 import { nextCurves, type UpcomingCurve } from '../tracking/nextCurves';
 import { RouteTracker, type Fix, type TrackStatus, type TrackerRoute } from '../tracking/routeTracker';
 import { AnnounceScheduler, announceSettingsFrom } from '../voice/announceScheduler';
+import { systemPhrase } from '../voice/phrases';
 import type { LocationSource } from './locationSource';
 
 export interface DriveSnapshot {
@@ -70,11 +71,11 @@ export class DriveSession {
     const say = (t: string) => settings.voiceEnabled && this.o.speak(t);
 
     if (st.status === 'offRoute') {
-      if (this.lastStatus !== 'offRoute') say('Abseits der Route');
+      if (this.lastStatus !== 'offRoute') say(systemPhrase('offRoute', settings.voiceLanguage));
     } else if (st.status === 'finished') {
-      if (this.lastStatus !== 'finished') say('Ziel erreicht');
+      if (this.lastStatus !== 'finished') say(systemPhrase('finished', settings.voiceLanguage));
     } else if (st.status === 'onRoute') {
-      if (this.lastStatus === 'offRoute') say('Wieder auf der Route');
+      if (this.lastStatus === 'offRoute') say(systemPhrase('backOnRoute', settings.voiceLanguage));
       this.scheduler.setSettings(announceSettingsFrom(settings));
       const a = this.scheduler.next(st.dist, st.speed);
       if (a) say(a.text);

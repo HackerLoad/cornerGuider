@@ -3,6 +3,7 @@ export type VoiceLanguage = 'de' | 'en';
 export type Units = 'metric' | 'imperial';
 export type DriveSide = 'right' | 'left';
 export type OrientationMode = 'auto' | 'portrait' | 'landscape';
+export type UiLanguage = 'auto' | 'de' | 'en';
 
 /** Einstellungen, die die Ansagen beeinflussen (reines TS, wird auch von den Tests benutzt). */
 export interface DriveSettings {
@@ -36,6 +37,8 @@ export interface DisplaySettings {
   /** Anzahl der weiteren Kurven in der Liste unter der Grafik (0–4) */
   listCount: number;
   orientation: OrientationMode;
+  /** Sprache der Bedienoberfläche (auto = Gerätesprache) */
+  uiLanguage: UiLanguage;
 }
 
 export const DEFAULT_DRIVE_SETTINGS: DriveSettings = {
@@ -56,4 +59,5 @@ export const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = {
   showRidingLine: true,
   listCount: 3,
   orientation: 'auto',
+  uiLanguage: 'auto',
 };

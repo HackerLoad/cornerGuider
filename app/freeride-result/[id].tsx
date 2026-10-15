@@ -2,8 +2,7 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { evaluateRecording, type RecordingSummary } from '../../src/freeride/evaluateRecording';
-import { directionLabel, formatKm, formatRadius } from '../../src/format';
-import { useUnits } from '../../src/stores/settingsStore';
+import { useFormat } from '../../src/i18n';
 import { loadRecording } from '../../src/services/freerideStorage';
 import { colors } from '../../src/theme';
 
@@ -23,7 +22,7 @@ function Row({ label, value, note }: { label: string; value: string; note?: stri
 
 export default function FreerideResult() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const units = useUnits();
+  const f = useFormat();
   const [state, setState] = useState<'loading' | 'missing' | 'short' | RecordingSummary>('loading');
 
   useEffect(() => {
@@ -39,42 +38,39 @@ export default function FreerideResult() {
   }, [id]);
 
   if (state === 'loading') return <View style={styles.center}><ActivityIndicator color={colors.accent} /></View>;
-  if (state === 'missing') return <View style={styles.center}><Text style={styles.muted}>Aufzeichnung nicht gefunden.</Text></View>;
-  if (state === 'short') return <View style={styles.center}><Text style={styles.muted}>Die Fahrt war zu kurz für eine Auswertung.</Text></View>;
+  if (state === 'missing') return <View style={styles.center}><Text style={styles.muted}>{f.t('result.missing')}</Text></View>;
+  if (state === 'short') return <View style={styles.center}><Text style={styles.muted}>{f.t('result.tooShort')}</Text></View>;
 
   const r = state;
   const e = r.eval;
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 16, gap: 10 }}>
-      <Stack.Screen options={{ title: 'Auswertung' }} />
-      <Text style={styles.title}>{formatKm(r.distanceKm * 1000, units)} in {Math.round(r.durationMin)} min</Text>
-      <Text style={styles.note}>
-        Verglichen werden die angesagten Kurven mit den Kurven der tatsächlich gefahrenen Spur (GPS, ca. alle 15 m).
-        Anfang und Ende der Fahrt zählen nicht mit.
-      </Text>
+      <Stack.Screen options={{ title: f.t('result.title') }} />
+      <Text style={styles.title}>{f.t('result.distanceTime', { distance: f.km(r.distanceKm * 1000), minutes: Math.round(r.durationMin) })}</Text>
+      <Text style={styles.note}>{f.t('result.explain')}</Text>
 
-      <Row label="Angesagte Kurven" value={String(e.announced)} />
-      <Row label="Davon richtig" value={`${e.correct} (${pct(e.precision)})`} note="Position ±40 m, Richtung gleich, Stufe ±1" />
-      <Row label="Falschmeldungen" value={String(e.falseAlarms.length)} />
-      <Row label="Tatsächliche Kurven bis Stufe 4" value={String(e.actual)} />
-      <Row label="Davon angesagt" value={`${e.recalled} (${pct(e.recall)})`} />
-      <Row label="Straße sicher zugeordnet" value={pct(r.okShare)} note="Anteil der Fahrzeit" />
-      <Row label="Vorhersage endete früh" value={pct(r.shortPathShare)} note="Kreuzung, Kreisverkehr oder fehlende Daten vor 600 m" />
+      <Row label={f.t('result.announced')} value={String(e.announced)} />
+      <Row label={f.t('result.correct')} value={`${e.correct} (${pct(e.precision)})`} note={f.t('result.correctNote')} />
+      <Row label={f.t('result.falseAlarms')} value={String(e.falseAlarms.length)} />
+      <Row label={f.t('result.actual')} value={String(e.actual)} />
+      <Row label={f.t('result.recalled')} value={`${e.recalled} (${pct(e.recall)})`} />
+      <Row label={f.t('result.okShare')} value={pct(r.okShare)} note={f.t('result.okShareNote')} />
+      <Row label={f.t('result.short')} value={pct(r.shortPathShare)} note={f.t('result.shortNote')} />
 
       {e.falseAlarms.length > 0 ? (
         <View style={styles.block}>
-          <Text style={styles.section}>Falschmeldungen</Text>
+          <Text style={styles.section}>{f.t('result.falseAlarms')}</Text>
           {e.falseAlarms.map((a, i) => (
-            <Text key={i} style={styles.item}>{directionLabel(a.direction)} {a.grade}</Text>
+            <Text key={i} style={styles.item}>{f.dir(a.direction)} {a.grade}</Text>
           ))}
         </View>
       ) : null}
       {e.missed.length > 0 ? (
         <View style={styles.block}>
-          <Text style={styles.section}>Nicht angesagt</Text>
+          <Text style={styles.section}>{f.t('result.missedList')}</Text>
           {e.missed.slice(0, 30).map((c, i) => (
             <Text key={i} style={styles.item}>
-              {directionLabel(c.direction)} {c.grade} · {formatRadius(c.minRadius, units)} · bei {formatKm(c.startDist, units)}
+              {f.t('result.missedItem', { dir: f.dir(c.direction), grade: c.grade, radius: f.radius(c.minRadius), position: f.km(c.startDist) })}
             </Text>
           ))}
         </View>

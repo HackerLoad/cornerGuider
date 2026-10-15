@@ -1,4 +1,5 @@
 import { XMLParser } from 'fast-xml-parser';
+import { AppError } from '../errors';
 import type { LatLon } from '../geo/types';
 
 export interface ParsedGpx {
@@ -31,7 +32,7 @@ function textOf(v: unknown): string | null {
 export function parseGpx(xml: string): ParsedGpx {
   const doc = parser.parse(xml) as { gpx?: Record<string, any> };
   const gpx = doc.gpx;
-  if (!gpx) throw new Error('Keine gültige GPX-Datei');
+  if (!gpx) throw new AppError('err.gpxInvalid');
 
   const trkPoints: LatLon[] = [];
   for (const trk of gpx.trk ?? []) {
@@ -46,5 +47,5 @@ export function parseGpx(xml: string): ParsedGpx {
   if (rtePoints.length >= 2) {
     return { name: textOf(gpx.rte?.[0]?.name) ?? textOf(gpx.metadata?.name), kind: 'route', points: rtePoints };
   }
-  throw new Error('GPX enthält weder Track noch Route mit mindestens 2 Punkten');
+  throw new AppError('err.gpxEmpty');
 }

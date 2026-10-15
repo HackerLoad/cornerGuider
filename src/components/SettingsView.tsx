@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useFormat } from '../i18n';
 import { applyOrientation } from '../services/orientation';
 import { speakWithSettings, voicesFor, type Voice } from '../services/speech';
 import { currentDriveSettings, useSettingsStore } from '../stores/settingsStore';
@@ -7,17 +8,9 @@ import { exampleAnnouncement } from '../voice/phrases';
 import { colors } from '../theme';
 import { ButtonRow, ChoiceRow, Section, StepperRow, ToggleRow, clamp } from './SettingsRows';
 
-const GRADE_NOTE: Record<number, string> = {
-  1: 'Nur Spitzkehren',
-  2: 'Spitzkehren und sehr enge Kurven',
-  3: 'Enge Kurven',
-  4: 'Mittlere und engere Kurven',
-  5: 'Fast alle Kurven',
-  6: 'Alle Kurven',
-};
-
 export function SettingsView() {
   const s = useSettingsStore();
+  const f = useFormat();
   const [voices, setVoices] = useState<Voice[]>([]);
   const [showVoices, setShowVoices] = useState(false);
 
@@ -29,74 +22,74 @@ export function SettingsView() {
     };
   }, [s.voiceLanguage]);
 
-  const voiceName = s.voiceId ? (voices.find((v) => v.identifier === s.voiceId)?.name ?? 'Gewählte Stimme') : 'Standardstimme';
+  const voiceName = s.voiceId ? (voices.find((v) => v.identifier === s.voiceId)?.name ?? f.t('set.voiceSelected')) : f.t('set.voiceDefault');
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 16, paddingBottom: 48 }}>
-      <Section title="Ansagen">
-        <ToggleRow label="Sprachansagen" value={s.voiceEnabled} onChange={(v) => s.set({ voiceEnabled: v })} />
+      <Section title={f.t('set.sec.announce')}>
+        <ToggleRow label={f.t('set.voiceEnabled')} value={s.voiceEnabled} onChange={(v) => s.set({ voiceEnabled: v })} />
         <StepperRow
-          label="Ansagen ab Stufe"
-          note={`${GRADE_NOTE[s.minAnnounceGrade]}. Leichtere Kurven werden nur genannt, wenn sie direkt auf eine angesagte folgen.`}
-          value={`Stufe ${s.minAnnounceGrade}`}
+          label={f.t('set.minGrade')}
+          note={f.t('set.minGradeNote', { what: f.t(`set.grade.${s.minAnnounceGrade}` as 'set.grade.1') })}
+          value={f.t('set.gradeValue', { n: s.minAnnounceGrade })}
           onMinus={() => s.set({ minAnnounceGrade: clamp(s.minAnnounceGrade - 1, 1, 6) })}
           onPlus={() => s.set({ minAnnounceGrade: clamp(s.minAnnounceGrade + 1, 1, 6) })}
         />
         <ChoiceRow
-          label="Stil"
+          label={f.t('set.style')}
           value={s.announceStyle}
-          options={[{ value: 'long', label: 'Ausführlich' }, { value: 'short', label: 'Kurz' }]}
-          note={s.announceStyle === 'long' ? 'Mit Entfernung: „In 240 Metern Rechts 3"' : 'Nur die Kurve: „Rechts 3"'}
+          options={[{ value: 'long', label: f.t('set.style.long') }, { value: 'short', label: f.t('set.style.short') }]}
+          note={f.t(s.announceStyle === 'long' ? 'set.style.longNote' : 'set.style.shortNote')}
           onChange={(v) => s.set({ announceStyle: v })}
         />
         {s.announceStyle === 'long' ? (
-          <ToggleRow label="Form ansagen" note={'„zieht zu“ bzw. „öffnet“'} value={s.announceShape} onChange={(v) => s.set({ announceShape: v })} />
+          <ToggleRow label={f.t('set.shape')} note={f.t('set.shapeNote')} value={s.announceShape} onChange={(v) => s.set({ announceShape: v })} />
         ) : null}
         <StepperRow
-          label="Vorwarnzeit"
+          label={f.t('set.lead')}
           value={`${s.leadSeconds} s`}
           onMinus={() => s.set({ leadSeconds: clamp(s.leadSeconds - 1, 2, 15) })}
           onPlus={() => s.set({ leadSeconds: clamp(s.leadSeconds + 1, 2, 15) })}
         />
         <StepperRow
-          label="Mindestabstand"
+          label={f.t('set.minLead')}
           value={s.units === 'metric' ? `${s.minLeadM} m` : `${Math.round(s.minLeadM * 3.281 / 10) * 10} ft`}
           onMinus={() => s.set({ minLeadM: clamp(s.minLeadM - 10, 40, 300) })}
           onPlus={() => s.set({ minLeadM: clamp(s.minLeadM + 10, 40, 300) })}
         />
       </Section>
 
-      <Section title="Stimme" hint="Die Lautstärke der Ansagen richtet sich nach der Lautstärke des Geräts. Musik anderer Apps wird währenddessen leiser, nicht gestoppt.">
+      <Section title={f.t('set.sec.voice')} hint={f.t('set.voiceHint')}>
         <ChoiceRow
-          label="Sprache der Ansagen"
+          label={f.t('set.voiceLang')}
           value={s.voiceLanguage}
           options={[{ value: 'de', label: 'Deutsch' }, { value: 'en', label: 'English' }]}
           onChange={(v) => s.set({ voiceLanguage: v, voiceId: null })}
         />
         <StepperRow
-          label="Sprechtempo"
+          label={f.t('set.rate')}
           value={`${s.speechRate.toFixed(1)}×`}
           onMinus={() => s.set({ speechRate: clamp(Math.round((s.speechRate - 0.1) * 10) / 10, 0.6, 1.6) })}
           onPlus={() => s.set({ speechRate: clamp(Math.round((s.speechRate + 0.1) * 10) / 10, 0.6, 1.6) })}
         />
-        <ButtonRow label={`Stimme: ${voiceName}`} note={voices.length ? `${voices.length} Stimmen verfügbar` : 'Keine weiteren Stimmen gefunden'} onPress={() => setShowVoices((v) => !v)} />
+        <ButtonRow label={f.t('set.voice', { name: voiceName })} note={voices.length ? f.t('set.voicesAvail', { count: voices.length }) : f.t('set.voicesNone')} onPress={() => setShowVoices((v) => !v)} />
         {showVoices ? (
           <View>
             <Pressable style={styles.voiceRow} onPress={() => s.set({ voiceId: null })}>
-              <Text style={[styles.voiceText, !s.voiceId && styles.voiceActive]}>Standardstimme</Text>
+              <Text style={[styles.voiceText, !s.voiceId && styles.voiceActive]}>{f.t('set.voiceDefault')}</Text>
             </Pressable>
             {voices.map((v) => (
               <Pressable key={v.identifier} style={styles.voiceRow} onPress={() => s.set({ voiceId: v.identifier })}>
                 <Text style={[styles.voiceText, s.voiceId === v.identifier && styles.voiceActive]}>
-                  {v.name} <Text style={styles.voiceMeta}>{v.language}{v.quality === 'Enhanced' ? ' · hohe Qualität' : ''}</Text>
+                  {v.name} <Text style={styles.voiceMeta}>{v.language}{v.quality === 'Enhanced' ? ` · ${f.t('set.highQuality')}` : ''}</Text>
                 </Text>
               </Pressable>
             ))}
           </View>
         ) : null}
         <ButtonRow
-          label="Ansage testen"
-          note="Spricht ein Beispiel mit den aktuellen Einstellungen"
+          label={f.t('set.test')}
+          note={f.t('set.testNote')}
           onPress={() => {
             const cur = currentDriveSettings();
             speakWithSettings(
@@ -107,47 +100,53 @@ export function SettingsView() {
         />
       </Section>
 
-      <Section title="Anzeige">
+      <Section title={f.t('set.sec.display')}>
         <ChoiceRow
-          label="Ausrichtung"
-          note="Quer ist für ein Handy am Lenker gedacht. Wirkt erst nach einem neuen App-Build."
+          label={f.t('set.uiLang')}
+          value={s.uiLanguage}
+          options={[{ value: 'auto', label: f.t('set.uiLang.auto') }, { value: 'de', label: 'Deutsch' }, { value: 'en', label: 'English' }]}
+          onChange={(v) => s.set({ uiLanguage: v })}
+        />
+        <ChoiceRow
+          label={f.t('set.orientation')}
+          note={f.t('set.orientationNote')}
           value={s.orientation}
-          options={[{ value: 'auto', label: 'Automatisch' }, { value: 'portrait', label: 'Hoch' }, { value: 'landscape', label: 'Quer' }]}
+          options={[{ value: 'auto', label: f.t('set.orient.auto') }, { value: 'portrait', label: f.t('set.orient.portrait') }, { value: 'landscape', label: f.t('set.orient.landscape') }]}
           onChange={(v) => {
             s.set({ orientation: v });
             void applyOrientation(v);
           }}
         />
         <ChoiceRow
-          label="Einheiten"
+          label={f.t('set.units')}
           value={s.units}
-          options={[{ value: 'metric', label: 'km · m' }, { value: 'imperial', label: 'mi · ft' }]}
+          options={[{ value: 'metric', label: f.t('set.units.metric') }, { value: 'imperial', label: f.t('set.units.imperial') }]}
           onChange={(v) => s.set({ units: v })}
         />
         <ChoiceRow
-          label="Verkehr"
-          note="Bestimmt die Spur, in der die Fahrlinie gezeichnet wird."
+          label={f.t('set.traffic')}
+          note={f.t('set.trafficNote')}
           value={s.driveSide}
-          options={[{ value: 'right', label: 'Rechtsverkehr' }, { value: 'left', label: 'Linksverkehr' }]}
+          options={[{ value: 'right', label: f.t('set.traffic.right') }, { value: 'left', label: f.t('set.traffic.left') }]}
           onChange={(v) => s.set({ driveSide: v })}
         />
-        <ToggleRow label="Fahrlinie zeigen" note="Rein geometrischer Vorschlag innerhalb der eigenen Spur" value={s.showRidingLine} onChange={(v) => s.set({ showRidingLine: v })} />
+        <ToggleRow label={f.t('set.line')} note={f.t('set.lineNote')} value={s.showRidingLine} onChange={(v) => s.set({ showRidingLine: v })} />
         <StepperRow
-          label="Weitere Kurven in der Liste"
+          label={f.t('set.listCount')}
           value={String(s.listCount)}
           onMinus={() => s.set({ listCount: clamp(s.listCount - 1, 0, 4) })}
           onPlus={() => s.set({ listCount: clamp(s.listCount + 1, 0, 4) })}
         />
       </Section>
 
-      <Section title="Sonstiges">
+      <Section title={f.t('set.sec.other')}>
         <ButtonRow
-          label="Einstellungen zurücksetzen"
+          label={f.t('set.reset')}
           danger
           onPress={() =>
-            Alert.alert('Einstellungen zurücksetzen?', 'Alle Einstellungen gehen auf die Standardwerte zurück. Strecken bleiben erhalten.', [
-              { text: 'Abbrechen', style: 'cancel' },
-              { text: 'Zurücksetzen', style: 'destructive', onPress: () => { s.reset(); void applyOrientation('auto'); } },
+            Alert.alert(f.t('set.resetTitle'), f.t('set.resetText'), [
+              { text: f.t('common.cancel'), style: 'cancel' },
+              { text: f.t('set.resetConfirm'), style: 'destructive', onPress: () => { s.reset(); void applyOrientation('auto'); } },
             ])
           }
         />

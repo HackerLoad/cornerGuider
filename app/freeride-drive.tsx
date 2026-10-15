@@ -6,8 +6,8 @@ import { CurveGraphic } from '../src/components/CurveGraphic';
 import { DriveLayout } from '../src/components/DriveLayout';
 import { SimulatedLocationSource } from '../src/drive/simulator';
 import { FreerideSession, type FreerideSnapshot } from '../src/freeride/session';
-import { directionLabel, formatDistance, formatSpeed } from '../src/format';
-import type { Units } from '../src/settings';
+import { AppError, errorMessage } from '../src/errors';
+import { useFormat } from '../src/i18n';
 import { configureAudioSession } from '../src/services/audioSession';
 import { DeviceLocationSource } from '../src/services/deviceLocation';
 import { saveRecording } from '../src/services/freerideStorage';
@@ -21,37 +21,43 @@ import { colors } from '../src/theme';
 /** Kopfzeile: nie umbrechen, die Schrift schrumpft stattdessen, bis der Text in die Breite passt. */
 const ONE_LINE = { numberOfLines: 1, adjustsFontSizeToFit: true, minimumFontScale: 0.4 } as const;
 
-function headline(s: FreerideSnapshot | null, units: Units): { text: string; tone: 'normal' | 'warn' | 'bad' } {
-  if (!s) return { text: 'GPS wird gesucht …', tone: 'normal' };
-  if (s.data === 'error' && s.status === 'noRoad') return { text: 'Keine Straßendaten', tone: 'bad' };
-  if (s.data === 'loading' && s.status === 'noRoad') return { text: 'Straßendaten laden …', tone: 'normal' };
-  if (s.status === 'noRoad') return { text: 'Keine Straße erkannt', tone: 'bad' };
-  if (s.status === 'uncertain') return { text: 'Straße unsicher – keine Ansage', tone: 'warn' };
+type Fmt = ReturnType<typeof useFormat>;
+
+function headline(s: FreerideSnapshot | null, f: Fmt): { text: string; tone: 'normal' | 'warn' | 'bad' } {
+  if (!s) return { text: f.t('drive.searching'), tone: 'normal' };
+  if (s.data === 'error' && s.status === 'noRoad') return { text: f.t('free.noData'), tone: 'bad' };
+  if (s.data === 'loading' && s.status === 'noRoad') return { text: f.t('free.loading'), tone: 'normal' };
+  if (s.status === 'noRoad') return { text: f.t('free.noRoad'), tone: 'bad' };
+  if (s.status === 'uncertain') return { text: f.t('free.uncertain'), tone: 'warn' };
   const first = s.upcoming[0];
-  if (!first) return { text: 'Keine Kurve voraus', tone: 'normal' };
-  const dir = `${directionLabel(first.curve.direction)} ${first.curve.grade}`;
+  if (!first) return { text: f.t('free.noCurve'), tone: 'normal' };
+  const dir = `${f.dir(first.curve.direction)} ${first.curve.grade}`;
   return {
-    text: first.inside ? `Jetzt: ${dir}` : `In ${formatDistance(Math.round(first.distanceTo / 10) * 10, units)}: ${dir}`,
+    text: first.inside ? `${f.t('drive.now')}: ${dir}` : `${f.t('drive.in', { distance: f.dist(Math.round(first.distanceTo / 10) * 10) })}: ${dir}`,
     tone: 'normal',
   };
 }
 
-function roadLine(s: FreerideSnapshot | null, units: Units): string {
-  if (!s || s.status === 'noRoad') return s?.dataError ? `Fehler: ${s.dataError}` : '';
+function roadLine(s: FreerideSnapshot | null, f: Fmt): string {
+  if (!s || s.status === 'noRoad') return s?.dataError ? f.t('free.error', { message: errorMessage(s.dataErrorRaw ?? s.dataError, f.lang) }) : '';
   const name = [s.wayRef, s.wayName].filter(Boolean).join(' · ');
+  const d = f.dist(Math.round(s.aheadM / 10) * 10);
   const end =
-    s.endReason === 'junction' || s.endReason === 'roundabout'
-      ? ` · ${s.endReason === 'junction' ? 'Kreuzung' : 'Kreisverkehr'} in ${formatDistance(Math.round(s.aheadM / 10) * 10, units)}`
-      : s.endReason === 'dataEnd'
-        ? ` · Datenende in ${formatDistance(Math.round(s.aheadM / 10) * 10, units)}`
-        : '';
+    s.endReason === 'junction'
+      ? ` · ${f.t('free.junction', { distance: d })}`
+      : s.endReason === 'roundabout'
+        ? ` · ${f.t('free.roundabout', { distance: d })}`
+        : s.endReason === 'dataEnd'
+          ? ` · ${f.t('free.dataEnd', { distance: d })}`
+          : '';
   return `${name}${end}`;
 }
 
 export default function FreerideDrive() {
   useKeepAwake();
   const { sim: simRouteId } = useLocalSearchParams<{ sim?: string }>();
-  const units = useSettingsStore((s) => s.units);
+  const f = useFormat();
+  const units = f.units;
   const driveSide = useSettingsStore((s) => s.driveSide);
   const showRidingLine = useSettingsStore((s) => s.showRidingLine);
   const listCount = useSettingsStore((s) => s.listCount);
@@ -71,7 +77,7 @@ export default function FreerideDrive() {
         let source: DeviceLocationSource | SimulatedLocationSource;
         if (simRouteId) {
           const route = await loadRoute(simRouteId);
-          if (!route) throw new Error('Route für die Simulation nicht gefunden.');
+          if (!route) throw new AppError('err.simRouteMissing');
           const simSource = new SimulatedLocationSource(route, { speedKmh: 60 });
           if (!cancelled) setSim(simSource);
           source = simSource;
@@ -84,7 +90,7 @@ export default function FreerideDrive() {
         unsub = s.subscribe(setSnap);
         await s.start();
       } catch (e) {
-        setError(e instanceof Error ? e.message : String(e));
+        setError(errorMessage(e, f.lang));
       }
     })();
     return () => {
@@ -107,28 +113,28 @@ export default function FreerideDrive() {
     }
   };
   const confirmStop = () =>
-    Alert.alert('Fahrt beenden?', 'Die Fahrt wird gespeichert und ausgewertet.', [
-      { text: 'Weiterfahren', style: 'cancel' },
-      { text: 'Beenden', style: 'destructive', onPress: () => void finish() },
+    Alert.alert(f.t('drive.endTitle'), f.t('free.endText'), [
+      { text: f.t('drive.continue'), style: 'cancel' },
+      { text: f.t('drive.end'), style: 'destructive', onPress: () => void finish() },
     ]);
 
   // Live-Aktivität (Sperrbildschirm / Dynamic Island) mit der nächsten Kurve
   useEffect(() => {
-    if (session) updateLiveActivity(liveInputFromFreeride(snap), units);
-  }, [snap, session, units]);
+    if (session) updateLiveActivity(liveInputFromFreeride(snap), units, f.lang);
+  }, [snap, session, units, f.lang]);
   useEffect(() => endLiveActivity, []);
 
   if (error) {
     return (
       <View style={styles.center}>
         <Text style={styles.alert}>{error}</Text>
-        <Pressable style={styles.stop} onPress={() => router.back()}><Text style={styles.stopText}>Zurück</Text></Pressable>
+        <Pressable style={styles.stop} onPress={() => router.back()}><Text style={styles.stopText}>{f.t('drive.back')}</Text></Pressable>
       </View>
     );
   }
   if (!session) return <View style={styles.center}><ActivityIndicator color={colors.accent} /></View>;
 
-  const head = headline(snap, units);
+  const head = headline(snap, f);
   const first = snap && snap.status !== 'noRoad' ? snap.upcoming[0] : undefined;
   const rest = snap?.upcoming.slice(1, 1 + listCount) ?? [];
 
@@ -139,7 +145,7 @@ export default function FreerideDrive() {
           <Text style={[styles.big, head.tone === 'bad' && { color: colors.danger }, head.tone === 'warn' && { color: colors.warn }]} {...ONE_LINE}>
             {head.text}
           </Text>
-          <Text style={styles.road} numberOfLines={1}>{roadLine(snap, units)}</Text>
+          <Text style={styles.road} numberOfLines={1}>{roadLine(snap, f)}</Text>
         </View>
       }
       graphic={({ width: w, height: h }) =>
@@ -152,8 +158,8 @@ export default function FreerideDrive() {
           ? rest.map((u) => (
               <View key={`${u.curve.startXY.x.toFixed(0)}_${u.curve.startXY.y.toFixed(0)}`} style={styles.item}>
                 <Text style={[styles.itemGrade, { color: colors.grade[u.curve.grade - 1] }]}>{u.curve.grade}</Text>
-                <Text style={styles.itemText}>{directionLabel(u.curve.direction)}</Text>
-                <Text style={styles.itemDist}>in {formatDistance(Math.round(u.distanceTo / 10) * 10, units)}</Text>
+                <Text style={styles.itemText}>{f.dir(u.curve.direction)}</Text>
+                <Text style={styles.itemDist}>{f.t('drive.in', { distance: f.dist(Math.round(u.distanceTo / 10) * 10) }).toLowerCase()}</Text>
               </View>
             ))
           : null
@@ -161,11 +167,11 @@ export default function FreerideDrive() {
       sim={
         sim ? (
           <View style={styles.simBar}>
-            <Text style={styles.simLabel}>SIMULATION {formatSpeed(sim.speedKmh / 3.6, units)}</Text>
+            <Text style={styles.simLabel}>{f.t('sim.label', { speed: f.speed(sim.speedKmh / 3.6) })}</Text>
             <View style={styles.simRow}>
               <SimBtn label="−10" onPress={() => { sim.setSpeedKmh(sim.speedKmh - 10); redraw((n) => n + 1); }} />
               <SimBtn label="+10" onPress={() => { sim.setSpeedKmh(sim.speedKmh + 10); redraw((n) => n + 1); }} />
-              <SimBtn label={sim.isPaused ? 'Weiter' : 'Pause'} onPress={() => { sim.setPaused(!sim.isPaused); redraw((n) => n + 1); }} />
+              <SimBtn label={sim.isPaused ? f.t('sim.resume') : f.t('sim.pause')} onPress={() => { sim.setPaused(!sim.isPaused); redraw((n) => n + 1); }} />
               <SimBtn label="+500 m" onPress={() => sim.jump(500)} />
             </View>
           </View>
@@ -174,10 +180,10 @@ export default function FreerideDrive() {
       footer={
         <View style={styles.footer}>
           <View>
-            <Text style={styles.footerText}>{snap ? formatSpeed(snap.speed, units) : ''}</Text>
-            <Text style={styles.attribution}>© OpenStreetMap-Mitwirkende</Text>
+            <Text style={styles.footerText}>{snap ? f.speed(snap.speed) : ''}</Text>
+            <Text style={styles.attribution}>{f.t('free.driveAttribution')}</Text>
           </View>
-          <Pressable onPress={confirmStop} style={styles.stop}><Text style={styles.stopText}>Beenden</Text></Pressable>
+          <Pressable onPress={confirmStop} style={styles.stop}><Text style={styles.stopText}>{f.t('drive.end')}</Text></Pressable>
         </View>
       }
     />

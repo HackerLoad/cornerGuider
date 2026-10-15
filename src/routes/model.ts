@@ -10,12 +10,19 @@ export interface StoredRoute {
   kind: 'track' | 'route';
   importedAt: number;
   lengthM: number;
-  warnings: string[];
+  /** Hinweise beim Import; ältere gespeicherte Strecken enthalten noch fertige deutsche Texte */
+  warnings: (RouteWarning | string)[];
   projectionOrigin: { lat: number; lon: number };
   /** Resampelte Route (≈5 m Abstand), lokale Meter; Distanz ergibt sich aus cumulativeLengths */
   path: XY[];
   curves: Curve[];
 }
+
+/** Hinweis zur Importqualität; die Oberfläche übersetzt ihn (Schlüssel `warn.<code>`). */
+export type RouteWarning =
+  | { code: 'sparse'; spacingM: number }
+  | { code: 'routeNoTrack' }
+  | { code: 'noCurves' };
 
 export interface RouteSummary {
   id: string;
@@ -35,18 +42,15 @@ export function buildStoredRoute(gpxText: string, fallbackName: string, now = Da
   const gpx = parseGpx(gpxText);
   const res = detectCurves(gpx.points);
 
-  const warnings: string[] = [];
+  const warnings: RouteWarning[] = [];
   const avgSpacing = res.length / Math.max(1, gpx.points.length - 1);
   if (avgSpacing > MAX_AVG_POINT_SPACING_M) {
-    warnings.push(
-      `Die Datei enthält nur wenige Punkte (Ø ${Math.round(avgSpacing)} m Abstand). ` +
-        'Kurven können fehlen oder ungenau sein – bitte den Track statt der Route exportieren.',
-    );
+    warnings.push({ code: 'sparse', spacingM: Math.round(avgSpacing) });
   }
   if (gpx.kind === 'route') {
-    warnings.push('Die Datei enthält eine Route ohne aufgezeichneten Track; die Genauigkeit hängt vom Export ab.');
+    warnings.push({ code: 'routeNoTrack' });
   }
-  if (res.curves.length === 0) warnings.push('Auf dieser Strecke wurden keine Kurven erkannt.');
+  if (res.curves.length === 0) warnings.push({ code: 'noCurves' });
 
   const curves = res.curves.map((c) => ({
     ...c,

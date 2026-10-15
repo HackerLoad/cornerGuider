@@ -1,14 +1,15 @@
 import { Link } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
-import { formatKm } from '../../src/format';
+import { errorMessage } from '../../src/errors';
+import { useFormat } from '../../src/i18n';
 import { pickAndImportGpx } from '../../src/services/importer';
 import { useRoutesStore } from '../../src/stores/routesStore';
-import { useSettingsStore, useUnits } from '../../src/stores/settingsStore';
+import { useSettingsStore } from '../../src/stores/settingsStore';
 import { colors } from '../../src/theme';
 
 export default function Routes() {
-  const units = useUnits();
+  const f = useFormat();
   const routes = useRoutesStore((s) => s.routes);
   const add = useRoutesStore((s) => s.add);
   const activeId = useSettingsStore((s) => s.activeRouteId);
@@ -21,7 +22,7 @@ export default function Routes() {
       const summary = await pickAndImportGpx();
       if (summary) add(summary);
     } catch (e) {
-      Alert.alert('Import fehlgeschlagen', e instanceof Error ? e.message : String(e));
+      Alert.alert(f.t('routes.importFailed'), errorMessage(e, f.lang));
     } finally {
       setBusy(false);
     }
@@ -34,9 +35,7 @@ export default function Routes() {
         keyExtractor={(r) => r.id}
         contentContainerStyle={{ padding: 16 }}
         ListEmptyComponent={
-          <Text style={styles.empty}>
-            Noch keine Strecke. Importiere eine GPX-Datei (Track oder Route) – zum Beispiel aus Kurviger oder Calimoto.
-          </Text>
+          <Text style={styles.empty}>{f.t('routes.empty')}</Text>
         }
         renderItem={({ item }) => {
           const isActive = item.id === activeId;
@@ -46,8 +45,8 @@ export default function Routes() {
                 <Pressable style={{ flex: 1 }}>
                   <Text style={styles.name} numberOfLines={2}>{item.name}</Text>
                   <Text style={styles.meta}>
-                    {formatKm(item.lengthM, units)} · {item.curveCount} Kurven ·{' '}
-                    {new Date(item.importedAt).toLocaleDateString('de-DE')}
+                    {f.km(item.lengthM)} · {f.tn(item.curveCount)} ·{' '}
+                    {new Date(item.importedAt).toLocaleDateString(f.lang === 'de' ? 'de-DE' : 'en-GB')}
                   </Text>
                 </Pressable>
               </Link>
@@ -56,14 +55,14 @@ export default function Routes() {
                 style={[styles.goChip, isActive && styles.goChipActive]}
                 hitSlop={8}
               >
-                <Text style={[styles.goChipText, isActive && { color: '#000' }]}>{isActive ? 'Go-Strecke' : 'Wählen'}</Text>
+                <Text style={[styles.goChipText, isActive && { color: '#000' }]}>{isActive ? f.t('routes.isGo') : f.t('routes.choose')}</Text>
               </Pressable>
             </View>
           );
         }}
       />
       <Pressable style={[styles.button, busy && { opacity: 0.6 }]} onPress={onImport} disabled={busy}>
-        {busy ? <ActivityIndicator color="#000" /> : <Text style={styles.buttonText}>GPX importieren</Text>}
+        {busy ? <ActivityIndicator color="#000" /> : <Text style={styles.buttonText}>{f.t('routes.import')}</Text>}
       </Pressable>
     </View>
   );

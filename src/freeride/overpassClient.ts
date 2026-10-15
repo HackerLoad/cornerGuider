@@ -1,3 +1,5 @@
+import { AppError } from '../errors';
+import type { TextKey } from '../i18n/dictionary';
 import type { LatLon } from '../geo/types';
 import type { OsmWay } from './types';
 
@@ -52,7 +54,14 @@ export interface FetchOptions {
   userAgent?: string;
 }
 
-export class OverpassError extends Error {}
+/** Fehler eines einzelnen Versuchs (Grund wird für die Meldung nach allen Versuchen gemerkt). */
+class AttemptError extends Error {
+  constructor(readonly reason: { key?: TextKey; text?: string }) {
+    super(reason.text ?? reason.key ?? 'attempt failed');
+  }
+}
+
+export class OverpassError extends AppError {}
 
 /**
  * Lädt Straßen im Umkreis. Die öffentlichen Instanzen sind oft überlastet (504/429) oder liefern kurz
@@ -60,12 +69,17 @@ export class OverpassError extends Error {}
  * Eine Antwort ohne Straßen gilt als Fehler (sonst würde ein Gebiet ohne Straßen als „geladen" markiert).
  */
 export async function fetchRoads(center: LatLon, radiusM: number, opts: FetchOptions = {}): Promise<OsmWay[]> {
+  return fetchOverpass(buildQuery(center, radiusM), opts);
+}
+
+/** Führt eine Overpass-Abfrage mit Wiederholungen und Serverwechsel aus. */
+export async function fetchOverpass(query: string, opts: FetchOptions = {}): Promise<OsmWay[]> {
   const doFetch = opts.fetchFn ?? fetch;
   const endpoints = opts.endpoints ?? OVERPASS_ENDPOINTS;
   const attempts = opts.attempts ?? 4;
   const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
-  const body = `data=${encodeURIComponent(buildQuery(center, radiusM))}`;
-  let lastError: unknown = null;
+  const body = `data=${encodeURIComponent(query)}`;
+  let lastReason: AttemptError['reason'] = { text: 'unknown' };
 
   for (let i = 0; i < attempts; i++) {
     const url = endpoints[i % endpoints.length]!;
@@ -81,18 +95,24 @@ export async function fetchRoads(center: LatLon, radiusM: number, opts: FetchOpt
         body,
         signal: ctrl?.signal,
       });
-      if (!res.ok) throw new OverpassError(`Overpass ${url}: HTTP ${res.status}`);
+      if (!res.ok) throw new AttemptError({ text: `HTTP ${res.status}` });
       const ways = parseOverpass(await res.json());
-      if (ways.length === 0) throw new OverpassError(`Overpass ${url}: keine Straßen in der Antwort`);
+      if (ways.length === 0) throw new AttemptError({ key: 'err.noRoadsInReply' });
       return ways;
     } catch (e) {
-      lastError = e;
+      lastReason =
+        e instanceof AttemptError
+          ? e.reason
+          : e instanceof Error && e.name === 'AbortError'
+            ? { key: 'err.timeout' }
+            : { text: e instanceof Error ? e.message : String(e) };
       if (i < attempts - 1) await sleep(500 * 2 ** i);
     } finally {
       if (timer) clearTimeout(timer);
     }
   }
-  const reason =
-    lastError instanceof Error ? (lastError.name === 'AbortError' ? 'Zeitüberschreitung' : lastError.message) : String(lastError);
-  throw new OverpassError(`Straßendaten nicht verfügbar (${attempts} Versuche): ${reason}`);
+  throw new OverpassError('err.roadData', {
+    attempts,
+    ...(lastReason.key ? { reasonKey: lastReason.key } : { reason: lastReason.text ?? '' }),
+  });
 }

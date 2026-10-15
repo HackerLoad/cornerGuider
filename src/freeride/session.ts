@@ -15,6 +15,8 @@ export type DataStatus = 'loading' | 'ready' | 'error';
 export interface FreerideSnapshot extends FreerideState {
   data: DataStatus;
   dataError?: string;
+  /** Ursprünglicher Fehler (kann ein AppError sein, damit die Oberfläche ihn in ihrer Sprache zeigt) */
+  dataErrorRaw?: unknown;
   /** Letzte gesprochene Ansage */
   lastSpoken?: string;
   /** m/s (0 wenn unbekannt) */
@@ -94,6 +96,7 @@ export class FreerideSession {
   private nextTryAt = 0;
   private failures = 0;
   private dataError: string | undefined;
+  private dataErrorRaw: unknown;
   private lastSpoken: string | undefined;
   private running = false;
   private startedAt = 0;
@@ -167,7 +170,7 @@ export class FreerideSession {
     else this.stats[state.status]++;
     if (state.endReason) this.stats.endReasons[state.endReason] = (this.stats.endReasons[state.endReason] ?? 0) + 1;
 
-    this.emit({ ...state, data, dataError: this.dataError, lastSpoken: this.lastSpoken, speed: fix.speed ?? 0 });
+    this.emit({ ...state, data, dataError: this.dataError, dataErrorRaw: this.dataErrorRaw, lastSpoken: this.lastSpoken, speed: fix.speed ?? 0 });
   }
 
   private emit(s: FreerideSnapshot): void {
@@ -210,10 +213,12 @@ export class FreerideSession {
         this.loaded.push({ center, radius });
         this.failures = 0;
         this.dataError = undefined;
+        this.dataErrorRaw = undefined;
       })
       .catch((e: unknown) => {
         this.failures++;
         this.dataError = e instanceof Error ? e.message : String(e);
+        this.dataErrorRaw = e;
         this.nextTryAt = this.now() + Math.min(60_000, (this.o.retryMs ?? 10_000) * 2 ** (this.failures - 1));
       })
       .finally(() => {

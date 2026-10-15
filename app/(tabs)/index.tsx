@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { Alert, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { formatKm } from '../../src/format';
+import { useFormat } from '../../src/i18n';
 import { useRoutesStore } from '../../src/stores/routesStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 import { colors } from '../../src/theme';
@@ -12,6 +12,7 @@ export default function Go() {
   const insets = useSafeAreaInsets();
   const landscape = width > height;
   const s = useSettingsStore();
+  const f = useFormat();
   const routes = useRoutesStore((r) => r.routes);
   const active = routes.find((r) => r.id === s.activeRouteId) ?? null;
 
@@ -20,10 +21,10 @@ export default function Go() {
   function go() {
     if (s.goMode === 'free') return router.push('/freeride-drive');
     if (!active) {
-      return Alert.alert('Keine Strecke gewählt', 'Importiere eine GPX-Datei und wähle sie als Strecke, oder starte die Freie Fahrt.', [
-        { text: 'Abbrechen', style: 'cancel' },
-        { text: 'Strecken öffnen', onPress: () => router.push('/routes') },
-        { text: 'Freie Fahrt', onPress: () => s.set({ goMode: 'free' }) },
+      return Alert.alert(f.t('go.alertTitle'), f.t('go.alertText'), [
+        { text: f.t('common.cancel'), style: 'cancel' },
+        { text: f.t('go.openRoutes'), onPress: () => router.push('/routes') },
+        { text: f.t('go.modeFree'), onPress: () => s.set({ goMode: 'free' }) },
       ]);
     }
     router.push({ pathname: '/drive/[id]', params: { id: active.id } });
@@ -32,34 +33,32 @@ export default function Go() {
   const info =
     s.goMode === 'free' ? (
       <View style={styles.info}>
-        <Text style={styles.infoTitle}>Freie Fahrt</Text>
-        <Text style={styles.infoText}>
-          Ohne Route: Der Straßenverlauf wird aus OpenStreetMap vorhergesagt (Versuch, braucht Internet).
-        </Text>
+        <Text style={styles.infoTitle}>{f.t('go.freeTitle')}</Text>
+        <Text style={styles.infoText}>{f.t('go.freeText')}</Text>
         <Pressable onPress={() => router.push('/freeride')} hitSlop={10}>
-          <Text style={styles.link}>Aufzeichnungen und Simulation</Text>
+          <Text style={styles.link}>{f.t('go.recordings')}</Text>
         </Pressable>
       </View>
     ) : active ? (
       <View style={styles.info}>
-        <Text style={styles.infoLabel}>STRECKE</Text>
+        <Text style={styles.infoLabel}>{f.t('go.routeLabel')}</Text>
         <Text style={styles.infoTitle} numberOfLines={2}>{active.name}</Text>
-        <Text style={styles.infoText}>{formatKm(active.lengthM, s.units)} · {active.curveCount} Kurven</Text>
+        <Text style={styles.infoText}>{f.km(active.lengthM)} · {f.tn(active.curveCount)}</Text>
         <View style={styles.links}>
-          <Pressable onPress={() => router.push('/routes')} hitSlop={10}><Text style={styles.link}>Ändern</Text></Pressable>
+          <Pressable onPress={() => router.push('/routes')} hitSlop={10}><Text style={styles.link}>{f.t('go.change')}</Text></Pressable>
           <Pressable
             onPress={() => router.push({ pathname: '/drive/[id]', params: { id: active.id, sim: '1' } })}
             hitSlop={10}
           >
-            <Text style={styles.link}>Simulation</Text>
+            <Text style={styles.link}>{f.t('go.simulation')}</Text>
           </Pressable>
         </View>
       </View>
     ) : (
       <View style={styles.info}>
-        <Text style={styles.infoTitle}>Noch keine Strecke</Text>
-        <Text style={styles.infoText}>Importiere eine GPX-Datei (Track oder Route, z. B. aus Kurviger oder Calimoto).</Text>
-        <Pressable onPress={() => router.push('/routes')} hitSlop={10}><Text style={styles.link}>Strecke importieren</Text></Pressable>
+        <Text style={styles.infoTitle}>{f.t('go.noRouteTitle')}</Text>
+        <Text style={styles.infoText}>{f.t('go.noRouteText')}</Text>
+        <Pressable onPress={() => router.push('/routes')} hitSlop={10}><Text style={styles.link}>{f.t('go.importRoute')}</Text></Pressable>
       </View>
     );
 
@@ -75,7 +74,7 @@ export default function Go() {
         <View style={styles.segment}>
           {(['route', 'free'] as const).map((m) => (
             <Pressable key={m} onPress={() => s.set({ goMode: m })} style={[styles.segBtn, s.goMode === m && styles.segActive]}>
-              <Text style={[styles.segText, s.goMode === m && styles.segTextActive]}>{m === 'route' ? 'Strecke' : 'Freie Fahrt'}</Text>
+              <Text style={[styles.segText, s.goMode === m && styles.segTextActive]}>{m === 'route' ? f.t('go.modeRoute') : f.t('go.modeFree')}</Text>
             </Pressable>
           ))}
         </View>
@@ -91,7 +90,7 @@ export default function Go() {
             pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
           ]}
           accessibilityRole="button"
-          accessibilityLabel="Fahrt starten"
+          accessibilityLabel={f.t('go.startA11y')}
         >
           <View style={[styles.goInner, { width: size, height: size, borderRadius: size / 2 }]}>
             <Text style={[styles.goText, { fontSize: size * 0.34 }]}>GO</Text>
@@ -103,7 +102,7 @@ export default function Go() {
 
       <View style={[styles.voiceChip, { bottom: 12 }]}>
         <Pressable onPress={() => s.set({ voiceEnabled: !s.voiceEnabled })} style={styles.chip} hitSlop={8}>
-          <Text style={styles.chipText}>{s.voiceEnabled ? 'Ansagen an' : 'Ansagen aus'} · ab Stufe {s.minAnnounceGrade}</Text>
+          <Text style={styles.chipText}>{f.t(s.voiceEnabled ? 'go.voiceOn' : 'go.voiceOff', { grade: s.minAnnounceGrade })}</Text>
         </Pressable>
       </View>
     </View>

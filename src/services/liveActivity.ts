@@ -1,5 +1,7 @@
 import { Platform } from 'react-native';
 import { LiveThrottle, toLiveContent, type LiveContent, type LiveInput } from '../liveActivity/model';
+import type { Lang } from '../i18n/translate';
+import { translate } from '../i18n/translate';
 import type { Units } from '../settings';
 
 type LiveModule = typeof import('expo-live-activity');
@@ -33,6 +35,7 @@ const CONFIG = {
 } as const;
 
 let activityId: string | undefined;
+let lastLang: Lang = 'de';
 const throttle = new LiveThrottle(2000);
 
 const toState = (c: LiveContent) => ({
@@ -44,10 +47,11 @@ const toState = (c: LiveContent) => ({
 });
 
 /** Zeigt die nächste Kurve auf Sperrbildschirm und Dynamic Island; startet die Aktivität beim ersten Aufruf. */
-export function updateLiveActivity(input: LiveInput, units: Units, now: number = Date.now()): void {
+export function updateLiveActivity(input: LiveInput, units: Units, lang: Lang = 'de', now: number = Date.now()): void {
   const m = native();
   if (!m) return;
-  const content = toLiveContent(input, units);
+  const content = toLiveContent(input, units, lang);
+  lastLang = lang;
   if (!throttle.shouldSend(content.key, now)) return;
   try {
     if (!activityId) activityId = m.startActivity(toState(content), CONFIG) ?? undefined;
@@ -65,7 +69,7 @@ export function endLiveActivity(): void {
   throttle.reset();
   if (!m || !id) return;
   try {
-    m.stopActivity(id, { title: 'Fahrt beendet', subtitle: undefined, imageName: 'finish', dynamicIslandImageName: 'finish' });
+    m.stopActivity(id, { title: translate(lastLang, 'live.ended'), subtitle: undefined, imageName: 'finish', dynamicIslandImageName: 'finish' });
   } catch {
     // ignorieren
   }

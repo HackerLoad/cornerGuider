@@ -1,4 +1,6 @@
 import * as Location from 'expo-location';
+import { AppError } from '../errors';
+import { t } from '../i18n';
 import type { LocationSource } from '../drive/locationSource';
 import type { GpsProfile } from '../tracking/adaptiveGps';
 import type { Fix } from '../tracking/routeTracker';
@@ -19,7 +21,7 @@ export class DeviceLocationSource implements LocationSource {
   async start(listener: (fix: Fix) => void): Promise<void> {
     this.listener = listener;
     const fg = await Location.requestForegroundPermissionsAsync();
-    if (fg.status !== 'granted') throw new Error('Standortzugriff wurde nicht erlaubt.');
+    if (fg.status !== 'granted') throw new AppError('err.location');
     const bg = await Location.requestBackgroundPermissionsAsync().catch(() => null);
     this.background = bg?.status === 'granted';
     await this.begin({ accuracy: 'best', timeIntervalMs: 1000, distanceIntervalM: 0 });
@@ -49,7 +51,7 @@ export class DeviceLocationSource implements LocationSource {
         showsBackgroundLocationIndicator: true,
         foregroundService: {
           notificationTitle: 'cornerGuider',
-          notificationBody: 'Kurvenführung aktiv',
+          notificationBody: t('notif.body'),
           notificationColor: '#ffb300',
         },
       });
