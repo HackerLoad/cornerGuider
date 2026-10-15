@@ -223,6 +223,7 @@ export const de = {
   'err.noRoadsInReply': 'keine Straßen in der Antwort',
   'err.location': 'Standortzugriff wurde nicht erlaubt.',
   'err.simRouteMissing': 'Route für die Simulation nicht gefunden.',
+  'err.readFile': 'Die Datei konnte nicht gelesen werden: {reason}',
 
   // Benachrichtigung des Hintergrunddienstes (Android) während der Fahrt
   'notif.body': 'Kurvenführung aktiv',
@@ -488,6 +489,7 @@ export const en: Record<TextKey, string> = {
   'err.noRoadsInReply': 'no roads in the reply',
   'err.location': 'Location access was not allowed.',
   'err.simRouteMissing': 'Route for the simulation not found.',
+  'err.readFile': 'The file could not be read: {reason}',
 
   'notif.body': 'Curve guidance active',
 

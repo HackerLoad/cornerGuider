@@ -1,6 +1,7 @@
 import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 import { readAsStringAsync } from 'expo-file-system/legacy';
+import { AppError } from '../errors';
 import { buildStoredRoute, summarize, type RouteSummary } from '../routes/model';
 import { saveRoute } from './routeStorage';
 
@@ -14,8 +15,12 @@ async function readText(uri: string): Promise<string> {
   try {
     return await new File(uri).text();
   } catch (e) {
-    if (!/^content:/i.test(uri)) throw e;
-    return readAsStringAsync(uri);
+    try {
+      if (!/^content:/i.test(uri)) throw e;
+      return await readAsStringAsync(uri);
+    } catch (e2) {
+      throw new AppError('err.readFile', { reason: e2 instanceof Error ? e2.message : String(e2) });
+    }
   }
 }
 

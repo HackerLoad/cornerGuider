@@ -1,15 +1,18 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { errorMessage } from '../src/errors';
 import { useFormat } from '../src/i18n';
 import { importGpxFromUri } from '../src/services/importer';
+import { pendingImportVersion, takePendingImportUri } from '../src/services/pendingImport';
 import { useRoutesStore } from '../src/stores/routesStore';
 import { colors } from '../src/theme';
 
 /** Ziel für „Öffnen mit"/Teilen: importiert die übergebene Datei und zeigt die Route. */
 export default function ImportScreen() {
-  const { uri } = useLocalSearchParams<{ uri?: string }>();
+  // Die Adresse liegt im Speicher (nicht in der URL); `version` löst bei einer weiteren geöffneten Datei neu aus
+  const version = pendingImportVersion();
+  const [uri] = useState(() => takePendingImportUri());
   const add = useRoutesStore((s) => s.add);
   const f = useFormat();
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +30,7 @@ export default function ImportScreen() {
     return () => {
       cancelled = true;
     };
-  }, [uri, add]);
+  }, [uri, version, add]);
 
   return (
     <View style={styles.container}>
