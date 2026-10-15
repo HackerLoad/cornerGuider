@@ -259,6 +259,23 @@ export const de = {
   'set.exportFeedbackNote': '{count} Markierungen aus allen Fahrten, als Datei zum Teilen',
   'set.clearFeedback': 'Alle Markierungen löschen',
   'set.clearFeedbackTitle': 'Alle Markierungen löschen?',
+
+  // Straßendaten (Freie Fahrt)
+  'data.sec': 'Straßendaten (Freie Fahrt)',
+  'data.customUrl': 'Eigener Overpass-Server',
+  'data.customUrlNote': 'Optional, zum Beispiel https://dein-server/api/interpreter. Wird vor den öffentlichen Servern angefragt.',
+  'data.cacheInfo': '{count} Kacheln gespeichert ({size})',
+  'data.cacheInfoNote': 'Gespeicherte Straßendaten funktionieren auch ohne Netz.',
+  'data.cacheClear': 'Gespeicherte Straßendaten löschen',
+  'data.cacheClearTitle': 'Gespeicherte Straßendaten löschen?',
+  'route.offline.title': 'Straßendaten für die Freie Fahrt',
+  'route.offline.explain': 'Lädt die Straßendaten entlang der Strecke auf das Gerät, damit die Freie Fahrt dort auch ohne Netz funktioniert.',
+  'route.offline.load': 'Offline laden ({count} Kacheln)',
+  'route.offline.progress': 'Lade {done} von {total} …',
+  'route.offline.done': 'Offline verfügbar',
+  'route.offline.partial': '{cached} von {total} Kacheln gespeichert',
+  'route.offline.failed': '{count} Kacheln konnten nicht geladen werden',
+  'route.offline.stop': 'Abbrechen',
 } as const;
 
 export type TextKey = keyof typeof de;
@@ -505,4 +522,20 @@ export const en: Record<TextKey, string> = {
   'set.exportFeedbackNote': '{count} marks from all rides, as a file to share',
   'set.clearFeedback': 'Delete all marks',
   'set.clearFeedbackTitle': 'Delete all marks?',
+
+  'data.sec': 'Road data (free ride)',
+  'data.customUrl': 'Custom Overpass server',
+  'data.customUrlNote': 'Optional, for example https://your-server/api/interpreter. Asked before the public servers.',
+  'data.cacheInfo': '{count} tiles stored ({size})',
+  'data.cacheInfoNote': 'Stored road data also works without a connection.',
+  'data.cacheClear': 'Delete stored road data',
+  'data.cacheClearTitle': 'Delete stored road data?',
+  'route.offline.title': 'Road data for the free ride',
+  'route.offline.explain': 'Downloads the road data along the route to the device so the free ride works there without a connection.',
+  'route.offline.load': 'Download offline ({count} tiles)',
+  'route.offline.progress': 'Downloading {done} of {total} …',
+  'route.offline.done': 'Available offline',
+  'route.offline.partial': '{cached} of {total} tiles stored',
+  'route.offline.failed': '{count} tiles could not be downloaded',
+  'route.offline.stop': 'Cancel',
 };

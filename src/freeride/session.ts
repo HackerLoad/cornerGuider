@@ -7,7 +7,8 @@ import type { Fix } from '../tracking/routeTracker';
 import { announceSettingsFrom } from '../voice/announceScheduler';
 import { FreeAnnouncer } from '../voice/freeAnnouncer';
 import { FreerideEngine, type FreerideState } from './engine';
-import { fetchRoads as defaultFetchRoads } from './overpassClient';
+import { fetchOverpass } from './overpassClient';
+import { buildTileQuery, tileKey, tilesNear, type Tile } from './tiles';
 import { RoadGraph } from './roadGraph';
 import type { OsmWay } from './types';
 
@@ -66,14 +67,15 @@ export interface FreerideSessionOptions {
   source: LocationSource;
   speak: (text: string) => void;
   getSettings: () => DriveSettings;
-  fetchRoads?: (center: LatLon, radiusM: number) => Promise<OsmWay[]>;
+  /** Straßendaten einer Kachel holen (Speicher und Netz); Standard: direkt von Overpass */
+  loadTile?: (tile: Tile) => Promise<OsmWay[]>;
   now?: () => number;
-  /** Radius eines Datenabrufs (m) */
-  loadRadiusM?: number;
-  /** So weit voraus muss bereits geladen sein (m) */
+  /** So weit voraus werden Kacheln schon geladen (m); eine zweite Marke liegt beim Doppelten */
   lookAheadM?: number;
   /** Wartezeit nach fehlgeschlagenem Abruf (ms), verdoppelt sich bis 60 s */
   retryMs?: number;
+  /** Höchstens so viele Kacheln gleichzeitig laden */
+  maxParallel?: number;
 }
 
 const initialSnapshot = (xy: XY): FreerideSnapshot => ({
@@ -94,8 +96,12 @@ export class FreerideSession {
   private readonly announcer = new FreeAnnouncer();
   private readonly now: () => number;
   private listeners = new Set<(s: FreerideSnapshot) => void>();
-  private loaded: { center: XY; radius: number }[] = [];
-  private inflight = false;
+  /** Zustand je Kachel: wartet, wird geladen oder ist da */
+  private tileState = new Map<string, 'queued' | 'loading' | 'loaded'>();
+  private queue: Tile[] = [];
+  private active = 0;
+  private refXY: XY | null = null;
+  private lastHeading: number | null = null;
   private nextTryAt = 0;
   private failures = 0;
   private dataError: string | undefined;
@@ -178,7 +184,7 @@ export class FreerideSession {
       if (settings.voiceEnabled) this.o.speak(a.text);
     }
 
-    const data: DataStatus = this.dataStatus(state.riderXY);
+    const data: DataStatus = this.dataStatus(fix);
     this.stats.steps++;
     if (data === 'loading' && state.status === 'noRoad') this.stats.loading++;
     else this.stats[state.status]++;
@@ -192,51 +198,82 @@ export class FreerideSession {
     this.listeners.forEach((l) => l(s));
   }
 
-  private covers(p: XY): boolean {
-    return this.loaded.some((c) => dist(c.center, p) <= c.radius * 0.85);
+  private dataStatus(here: LatLon): DataStatus {
+    const t = tilesNear(here, 0)[0]!;
+    if (this.tileState.get(tileKey(t)) === 'loaded') return 'ready';
+    return this.failures > 0 && this.active === 0 ? 'error' : 'loading';
   }
 
-  private dataStatus(here: XY): DataStatus {
-    if (this.covers(here)) return 'ready';
-    return this.failures > 0 && !this.inflight ? 'error' : 'loading';
+  /** Fahrtrichtung: aus dem GPS, sonst aus der Bewegung der letzten Positionen. */
+  private headingOf(fix: Fix, here: XY): number | null {
+    if (fix.heading != null && (fix.speed ?? 0) >= 2) {
+      this.lastHeading = fix.heading;
+      return fix.heading;
+    }
+    if (!this.refXY) this.refXY = here;
+    const dx = here.x - this.refXY.x;
+    const dy = here.y - this.refXY.y;
+    if (Math.hypot(dx, dy) >= 8) {
+      this.lastHeading = ((Math.atan2(dx, dy) * 180) / Math.PI + 360) % 360;
+      this.refXY = here;
+    }
+    return this.lastHeading;
   }
 
-  /** Lädt Straßendaten rund um die Position und voraus, bevor sie gebraucht werden. */
+  /**
+   * Sorgt dafür, dass die Kacheln rund um die Position und voraus geladen sind (oder gerade geladen werden).
+   * Die Kachel unter der Position kommt zuerst; höchstens `maxParallel` Abrufe laufen gleichzeitig.
+   */
   private maybeLoad(fix: Fix, graph: RoadGraph): void {
-    if (this.inflight || this.now() < this.nextTryAt) return;
-    const here = graph.projection.toXY(fix);
+    const hereXY = graph.projection.toXY(fix);
+    const heading = this.headingOf(fix, hereXY);
     const lookAhead = this.o.lookAheadM ?? 600;
-    const ahead: XY | null =
-      fix.heading != null && (fix.speed ?? 0) >= 2
-        ? {
-            x: here.x + Math.sin((fix.heading * Math.PI) / 180) * lookAhead,
-            y: here.y + Math.cos((fix.heading * Math.PI) / 180) * lookAhead,
-          }
-        : null;
-    const needHere = !this.covers(here);
-    const needAhead = ahead !== null && !this.covers(ahead);
-    if (!needHere && !needAhead) return;
+    const want: Tile[] = tilesNear(fix, 300);
+    if (heading !== null) {
+      for (const [dist, margin] of [[lookAhead, 300], [lookAhead * 2, 200]] as const) {
+        const p = graph.projection.toLatLon({
+          x: hereXY.x + Math.sin((heading * Math.PI) / 180) * dist,
+          y: hereXY.y + Math.cos((heading * Math.PI) / 180) * dist,
+        });
+        want.push(...tilesNear(p, margin));
+      }
+    }
+    for (const t of want) {
+      const key = tileKey(t);
+      if (!this.tileState.has(key)) {
+        this.tileState.set(key, 'queued');
+        this.queue.push(t);
+      }
+    }
+    this.pump(graph);
+  }
 
-    const radius = this.o.loadRadiusM ?? 1500;
-    const center = needHere || !ahead ? here : ahead;
-    this.inflight = true;
-    const doFetch = this.o.fetchRoads ?? ((c, r) => defaultFetchRoads(c, r));
-    doFetch(graph.projection.toLatLon(center), radius)
-      .then((ways) => {
-        graph.addWays(ways);
-        this.loaded.push({ center, radius });
-        this.failures = 0;
-        this.dataError = undefined;
-        this.dataErrorRaw = undefined;
-      })
-      .catch((e: unknown) => {
-        this.failures++;
-        this.dataError = e instanceof Error ? e.message : String(e);
-        this.dataErrorRaw = e;
-        this.nextTryAt = this.now() + Math.min(60_000, (this.o.retryMs ?? 10_000) * 2 ** (this.failures - 1));
-      })
-      .finally(() => {
-        this.inflight = false;
-      });
+  private pump(graph: RoadGraph): void {
+    const max = this.o.maxParallel ?? 2;
+    while (this.active < max && this.queue.length > 0 && this.now() >= this.nextTryAt) {
+      const tile = this.queue.shift()!;
+      const key = tileKey(tile);
+      this.tileState.set(key, 'loading');
+      this.active++;
+      const load = this.o.loadTile ?? ((t: Tile) => fetchOverpass(buildTileQuery(t), { allowEmpty: true }));
+      load(tile)
+        .then((ways) => {
+          graph.addWays(ways);
+          this.tileState.set(key, 'loaded');
+          this.failures = 0;
+          this.dataError = undefined;
+          this.dataErrorRaw = undefined;
+        })
+        .catch((e: unknown) => {
+          this.tileState.delete(key); // wird beim nächsten Positionsupdate erneut angefordert
+          this.failures++;
+          this.dataError = e instanceof Error ? e.message : String(e);
+          this.dataErrorRaw = e;
+          this.nextTryAt = this.now() + Math.min(60_000, (this.o.retryMs ?? 10_000) * 2 ** (this.failures - 1));
+        })
+        .finally(() => {
+          this.active--;
+        });
+    }
   }
 }

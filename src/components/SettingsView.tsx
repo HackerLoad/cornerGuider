@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFormat } from '../i18n';
 import { applyOrientation } from '../services/orientation';
 import { shareTextFile } from '../services/exporter';
+import { cacheInfo, clearTileCache, formatBytes } from '../services/roadData';
 import { speakWithSettings, voicesFor, type Voice } from '../services/speech';
 import { useFeedbackStore } from '../stores/feedbackStore';
 import { currentDriveSettings, useSettingsStore } from '../stores/settingsStore';
@@ -17,6 +18,7 @@ export function SettingsView() {
   const clearMarks = useFeedbackStore((m) => m.clear);
   const [voices, setVoices] = useState<Voice[]>([]);
   const [showVoices, setShowVoices] = useState(false);
+  const [cache, setCache] = useState(() => cacheInfo());
 
   useEffect(() => {
     let cancelled = false;
@@ -143,6 +145,46 @@ export function SettingsView() {
         />
       </Section>
 
+      <Section title={f.t('data.sec')} hint={f.t('data.customUrlNote')}>
+        <View style={styles.inputRow}>
+          <Text style={styles.inputLabel}>{f.t('data.customUrl')}</Text>
+          <TextInput
+            style={styles.input}
+            value={s.overpassUrl}
+            onChangeText={(v) => s.set({ overpassUrl: v })}
+            placeholder="https://…/api/interpreter"
+            placeholderTextColor={colors.muted}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="url"
+          />
+        </View>
+        <ButtonRow
+          label={f.t('data.cacheInfo', { count: cache.tiles, size: formatBytes(cache.bytes) })}
+          note={f.t('data.cacheInfoNote')}
+          onPress={() => setCache(cacheInfo())}
+        />
+        {cache.tiles > 0 ? (
+          <ButtonRow
+            label={f.t('data.cacheClear')}
+            danger
+            onPress={() =>
+              Alert.alert(f.t('data.cacheClearTitle'), undefined, [
+                { text: f.t('common.cancel'), style: 'cancel' },
+                {
+                  text: f.t('common.delete'),
+                  style: 'destructive',
+                  onPress: () => {
+                    clearTileCache();
+                    setCache(cacheInfo());
+                  },
+                },
+              ])
+            }
+          />
+        ) : null}
+      </Section>
+
       <Section title={f.t('set.sec.feedback')}>
         <ToggleRow
           label={f.t('set.feedbackButtons')}
@@ -196,5 +238,8 @@ const styles = StyleSheet.create({
   voiceRow: { paddingHorizontal: 24, paddingVertical: 11, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   voiceText: { color: colors.text, fontSize: 16 },
   voiceActive: { color: colors.accent, fontWeight: '800' },
+  inputRow: { paddingHorizontal: 16, paddingVertical: 12, gap: 6, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+  inputLabel: { color: colors.text, fontSize: 17 },
+  input: { color: colors.text, backgroundColor: colors.bg, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15 },
   voiceMeta: { color: colors.muted, fontSize: 12, fontWeight: '400' },
 });

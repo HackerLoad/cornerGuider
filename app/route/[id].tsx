@@ -1,7 +1,11 @@
 import { Stack, router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { CurveRow } from '../../src/components/CurveRow';
+import { prefetchTiles, type PrefetchProgress } from '../../src/freeride/tileLoader';
+import { tilesAlong } from '../../src/freeride/tiles';
+import { makeProjection } from '../../src/geo/projection';
+import { createTileLoader } from '../../src/services/roadData';
 import { useFormat } from '../../src/i18n';
 import { warningText } from '../../src/routes/warningText';
 import type { StoredRoute } from '../../src/routes/model';
@@ -20,6 +24,10 @@ export default function RouteOverview() {
   const allMarks = useFeedbackStore((s) => s.marks);
   const removeMark = useFeedbackStore((s) => s.remove);
   const routeMarks = allMarks.filter((m) => m.routeId === id);
+  const [cached, setCached] = useState<number | null>(null);
+  const [progress, setProgress] = useState<PrefetchProgress | null>(null);
+  const [downloading, setDownloading] = useState(false);
+  const stopRef = useRef(false);
   const [route, setRoute] = useState<StoredRoute | null | undefined>(undefined);
 
   useEffect(() => {
@@ -29,6 +37,36 @@ export default function RouteOverview() {
       cancelled = true;
     };
   }, [id]);
+
+  // Kacheln entlang der Strecke (für den Offline-Download der Freien Fahrt)
+  const tiles = useMemo(() => {
+    if (!route) return [];
+    const proj = makeProjection(route.projectionOrigin);
+    const pts = route.path.filter((_, i) => i % 20 === 0 || i === route.path.length - 1).map((p) => proj.toLatLon(p));
+    return tilesAlong(pts, 1);
+  }, [route]);
+
+  useEffect(() => {
+    if (tiles.length === 0) return;
+    let cancelled = false;
+    const loader = createTileLoader();
+    Promise.all(tiles.map((t) => loader.has(t))).then((has) => !cancelled && setCached(has.filter(Boolean).length));
+    return () => {
+      cancelled = true;
+    };
+  }, [tiles, downloading]);
+
+  const startDownload = async () => {
+    stopRef.current = false;
+    setDownloading(true);
+    setProgress({ done: 0, total: tiles.length, failed: 0 });
+    try {
+      const res = await prefetchTiles(tiles, createTileLoader(), { onProgress: setProgress, shouldStop: () => stopRef.current });
+      setProgress(res);
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   if (route === undefined) {
     return (
@@ -89,6 +127,30 @@ export default function RouteOverview() {
             ) : (
               <Text style={styles.goInfo}>{f.t('route.isGo')}</Text>
             )}
+            <View style={styles.offline}>
+              <Text style={styles.summary}>{f.t('route.offline.title')}</Text>
+              <Text style={styles.offlineText}>{f.t('route.offline.explain')}</Text>
+              {downloading && progress ? (
+                <>
+                  <Text style={styles.offlineText}>{f.t('route.offline.progress', { done: progress.done, total: progress.total })}</Text>
+                  <Pressable onPress={() => { stopRef.current = true; }} hitSlop={8}>
+                    <Text style={styles.offlineLink}>{f.t('route.offline.stop')}</Text>
+                  </Pressable>
+                </>
+              ) : cached !== null && tiles.length > 0 && cached >= tiles.length ? (
+                <Text style={styles.offlineOk}>✓ {f.t('route.offline.done')}</Text>
+              ) : (
+                <>
+                  {cached !== null && cached > 0 ? <Text style={styles.offlineText}>{f.t('route.offline.partial', { cached, total: tiles.length })}</Text> : null}
+                  <Pressable style={[styles.button, styles.secondary]} onPress={() => void startDownload()}>
+                    <Text style={[styles.buttonText, { color: colors.accent }]}>{f.t('route.offline.load', { count: tiles.length - (cached ?? 0) })}</Text>
+                  </Pressable>
+                </>
+              )}
+              {progress && progress.failed > 0 && !downloading ? (
+                <Text style={styles.warning}>{f.t('route.offline.failed', { count: progress.failed })}</Text>
+              ) : null}
+            </View>
             <Pressable
               style={[styles.button, styles.secondary]}
               onPress={() => router.push({ pathname: '/drive/[id]', params: { id: route.id, sim: '1' } })}
@@ -138,6 +200,10 @@ const styles = StyleSheet.create({
   button: { backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginTop: 14 },
   markRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, backgroundColor: colors.card, borderRadius: 12, padding: 12 },
   markText: { color: colors.text, fontSize: 15, flex: 1 },
+  offline: { marginTop: 16, gap: 6 },
+  offlineText: { color: colors.muted, fontSize: 14, lineHeight: 20 },
+  offlineLink: { color: colors.accent, fontSize: 15, fontWeight: '700' },
+  offlineOk: { color: '#6fcf6f', fontSize: 16, fontWeight: '700' },
   goInfo: { color: colors.muted, fontSize: 13, marginTop: 8, textAlign: 'center' },
   secondary: { backgroundColor: colors.card, marginTop: 8 },
   buttonText: { color: '#000', fontSize: 17, fontWeight: '800' },

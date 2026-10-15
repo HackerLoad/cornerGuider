@@ -14,7 +14,7 @@ const route = { path: det.path, projectionOrigin: det.projectionOrigin };
 const ways = parseOverpass(JSON.parse(fx('osm-amalfi.json')));
 const flush = () => new Promise<void>((r) => setImmediate(r));
 
-function setup(fetchRoads: (c: unknown, r: number) => Promise<typeof ways>, speedKmh = 54) {
+function setup(loadTile: (t: unknown) => Promise<typeof ways>, speedKmh = 54) {
   const clock = { t: 1_000_000 };
   const sim = new SimulatedLocationSource(route, { speedKmh, startDist: 60, now: () => clock.t });
   const spoken: string[] = [];
@@ -22,7 +22,7 @@ function setup(fetchRoads: (c: unknown, r: number) => Promise<typeof ways>, spee
     source: sim,
     speak: (t) => spoken.push(t),
     getSettings: () => DEFAULT_DRIVE_SETTINGS,
-    fetchRoads: fetchRoads as never,
+    loadTile: loadTile as never,
     now: () => clock.t,
     retryMs: 10_000,
   });
@@ -36,15 +36,15 @@ function setup(fetchRoads: (c: unknown, r: number) => Promise<typeof ways>, spee
 
 describe('FreerideSession', () => {
   it('lädt Straßendaten, sagt Kurven an und zeichnet die Fahrt auf', async () => {
-    const fetchRoads = jest.fn(async () => ways);
-    const { session, spoken, step, sim } = setup(fetchRoads);
+    const loadTile = jest.fn(async () => ways);
+    const { session, spoken, step, sim } = setup(loadTile);
     await session.start();
     expect(session.snapshot.data).toBe('loading');
     await flush();
     for (let i = 0; i < 280; i++) await step();
     await sim.stop();
 
-    expect(fetchRoads).toHaveBeenCalled();
+    expect(loadTile).toHaveBeenCalled();
     expect(session.snapshot.data).toBe('ready');
     expect(spoken.length).toBeGreaterThan(10);
     expect(spoken[0]).toMatch(/^In \d+ Metern/);
@@ -77,34 +77,34 @@ describe('FreerideSession', () => {
 
   it('meldet Datenfehler und versucht es nach der Wartezeit erneut', async () => {
     let calls = 0;
-    const fetchRoads = jest.fn(async () => {
+    const loadTile = jest.fn(async () => {
       calls++;
       if (calls <= 2) throw new Error('504');
       return ways;
     });
-    const { session, step, sim } = setup(fetchRoads);
+    const { session, step, sim } = setup(loadTile);
     await session.start();
     await flush();
     await step();
     expect(session.snapshot.data).toBe('error');
     expect(session.snapshot.dataError).toContain('504');
-    const first = fetchRoads.mock.calls.length;
+    const first = loadTile.mock.calls.length;
     for (let i = 0; i < 5; i++) await step(); // noch innerhalb der Wartezeit (10 s)
-    expect(fetchRoads.mock.calls.length).toBe(first);
+    expect(loadTile.mock.calls.length).toBe(first);
     for (let i = 0; i < 40; i++) await step();
     await sim.stop();
-    expect(fetchRoads.mock.calls.length).toBeGreaterThan(first);
+    expect(loadTile.mock.calls.length).toBeGreaterThan(first);
     expect(session.snapshot.data).toBe('ready');
   });
 
   it('lädt nach, sobald die Straße voraus nicht mehr abgedeckt ist', async () => {
-    const fetchRoads = jest.fn(async () => ways);
-    const { session, step, sim } = setup(fetchRoads, 108);
+    const loadTile = jest.fn(async () => ways);
+    const { session, step, sim } = setup(loadTile, 108);
     await session.start();
     await flush();
     for (let i = 0; i < 150; i++) await step();
     await sim.stop();
-    expect(fetchRoads.mock.calls.length).toBeGreaterThan(1);
+    expect(loadTile.mock.calls.length).toBeGreaterThan(1);
   });
 });
 
@@ -121,5 +121,40 @@ describe('Markierungen (Rückmeldung)', () => {
     expect(Math.abs(m.lat - 40.6)).toBeLessThan(0.1);
     expect(m.curve?.grade).toBeGreaterThanOrEqual(1);
     expect(m.id).toBeTruthy();
+  });
+});
+
+describe('Kachel-Laden der Session', () => {
+  it('fordert jede Kachel nur einmal an, die Kachel unter der Position zuerst', async () => {
+    const requested: string[] = [];
+    const loadTile = jest.fn(async (t: { z: number; x: number; y: number }) => {
+      requested.push(`${t.z}_${t.x}_${t.y}`);
+      return ways;
+    });
+    const { session, step, sim } = setup(loadTile as never, 72);
+    await session.start();
+    await flush();
+    for (let i = 0; i < 120; i++) await step();
+    await sim.stop();
+    expect(new Set(requested).size).toBe(requested.length); // keine Doppelabrufe
+    expect(requested.length).toBeGreaterThanOrEqual(2);
+    expect(session.snapshot.data).toBe('ready');
+  });
+
+  it('begrenzt die gleichzeitigen Abrufe', async () => {
+    let active = 0;
+    let peak = 0;
+    const loadTile = jest.fn(async () => {
+      active++;
+      peak = Math.max(peak, active);
+      await new Promise((r) => setTimeout(r, 5));
+      active--;
+      return ways;
+    });
+    const { session, step, sim } = setup(loadTile as never, 108);
+    await session.start();
+    for (let i = 0; i < 30; i++) await step();
+    await sim.stop();
+    expect(peak).toBeLessThanOrEqual(2);
   });
 });

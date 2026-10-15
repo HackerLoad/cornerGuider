@@ -52,6 +52,11 @@ export interface FetchOptions {
   timeoutMs?: number;
   sleep?: (ms: number) => Promise<void>;
   userAgent?: string;
+  /**
+   * Leere Antworten zulassen (z. B. Kacheln ohne Straßen). Eine leere Antwort muss dann von einem zweiten
+   * Versuch (anderer Server) bestätigt werden, weil öffentliche Server kurz leere Antworten liefern können.
+   */
+  allowEmpty?: boolean;
 }
 
 /** Fehler eines einzelnen Versuchs (Grund wird für die Meldung nach allen Versuchen gemerkt). */
@@ -80,6 +85,7 @@ export async function fetchOverpass(query: string, opts: FetchOptions = {}): Pro
   const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
   const body = `data=${encodeURIComponent(query)}`;
   let lastReason: AttemptError['reason'] = { text: 'unknown' };
+  let emptyReplies = 0;
 
   for (let i = 0; i < attempts; i++) {
     const url = endpoints[i % endpoints.length]!;
@@ -97,7 +103,11 @@ export async function fetchOverpass(query: string, opts: FetchOptions = {}): Pro
       });
       if (!res.ok) throw new AttemptError({ text: `HTTP ${res.status}` });
       const ways = parseOverpass(await res.json());
-      if (ways.length === 0) throw new AttemptError({ key: 'err.noRoadsInReply' });
+      if (ways.length === 0) {
+        emptyReplies++;
+        if (opts.allowEmpty && emptyReplies >= 2) return ways; // zwei Server bestätigen: wirklich keine Straßen
+        throw new AttemptError({ key: 'err.noRoadsInReply' });
+      }
       return ways;
     } catch (e) {
       lastReason =

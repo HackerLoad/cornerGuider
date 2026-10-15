@@ -2,8 +2,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import {
+  DEFAULT_DATA_SETTINGS,
   DEFAULT_DISPLAY_SETTINGS,
   DEFAULT_DRIVE_SETTINGS,
+  type DataSettings,
   type DisplaySettings,
   type DriveSettings,
 } from '../settings';
@@ -18,9 +20,9 @@ interface AppState {
   activeRouteId: string | null;
 }
 
-interface SettingsState extends DriveSettings, DisplaySettings, AppState {
+interface SettingsState extends DriveSettings, DisplaySettings, DataSettings, AppState {
   acceptSafety(): void;
-  set(patch: Partial<DriveSettings & DisplaySettings & AppState>): void;
+  set(patch: Partial<DriveSettings & DisplaySettings & DataSettings & AppState>): void;
   reset(): void;
 }
 
@@ -29,12 +31,13 @@ export const useSettingsStore = create<SettingsState>()(
     (set) => ({
       ...DEFAULT_DRIVE_SETTINGS,
       ...DEFAULT_DISPLAY_SETTINGS,
+      ...DEFAULT_DATA_SETTINGS,
       safetyAccepted: false,
       goMode: 'route',
       activeRouteId: null,
       acceptSafety: () => set({ safetyAccepted: true }),
       set: (patch) => set(patch),
-      reset: () => set({ ...DEFAULT_DRIVE_SETTINGS, ...DEFAULT_DISPLAY_SETTINGS }),
+      reset: () => set({ ...DEFAULT_DRIVE_SETTINGS, ...DEFAULT_DISPLAY_SETTINGS, ...DEFAULT_DATA_SETTINGS }),
     }),
     { name: 'settings', storage: createJSONStorage(() => AsyncStorage) },
   ),

@@ -13,6 +13,7 @@ import { useFormat } from '../src/i18n';
 import { configureAudioSession } from '../src/services/audioSession';
 import { DeviceLocationSource } from '../src/services/deviceLocation';
 import { saveRecording } from '../src/services/freerideStorage';
+import { createTileLoader } from '../src/services/roadData';
 import { loadRoute } from '../src/services/routeStorage';
 import { liveInputFromFreeride } from '../src/liveActivity/mappers';
 import { endLiveActivity, updateLiveActivity } from '../src/services/liveActivity';
@@ -88,7 +89,8 @@ export default function FreerideDrive() {
         } else {
           source = new DeviceLocationSource();
         }
-        s = new FreerideSession({ source, speak: (t) => speakWithSettings(t), getSettings: currentDriveSettings });
+        const loader = createTileLoader();
+        s = new FreerideSession({ source, speak: (t) => speakWithSettings(t), getSettings: currentDriveSettings, loadTile: (tile) => loader.load(tile).then((r) => r.ways) });
         if (cancelled) return;
         setSession(s);
         unsub = s.subscribe(setSnap);

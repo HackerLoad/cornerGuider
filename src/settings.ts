@@ -43,6 +43,14 @@ export interface DisplaySettings {
   showFeedbackButtons: boolean;
 }
 
+/** Einstellungen zu den Straßendaten der Freien Fahrt. */
+export interface DataSettings {
+  /** Eigener Overpass-Server (leer = nur die öffentlichen Server) */
+  overpassUrl: string;
+}
+
+export const DEFAULT_DATA_SETTINGS: DataSettings = { overpassUrl: '' };
+
 export const DEFAULT_DRIVE_SETTINGS: DriveSettings = {
   voiceEnabled: true,
   leadSeconds: 6,
