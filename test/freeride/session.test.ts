@@ -107,3 +107,19 @@ describe('FreerideSession', () => {
     expect(fetchRoads.mock.calls.length).toBeGreaterThan(1);
   });
 });
+
+describe('Markierungen (Rückmeldung)', () => {
+  it('ohne GPS gibt es keine Markierung, danach eine mit Position und aktueller Kurve', async () => {
+    const { session, step, sim } = setup(async () => ways);
+    expect(session.makeMark('wrong')).toBeNull();
+    await session.start();
+    await flush();
+    for (let i = 0; i < 40; i++) await step();
+    await sim.stop();
+    const m = session.makeMark('missing')!;
+    expect(m).toMatchObject({ kind: 'missing', source: 'free' });
+    expect(Math.abs(m.lat - 40.6)).toBeLessThan(0.1);
+    expect(m.curve?.grade).toBeGreaterThanOrEqual(1);
+    expect(m.id).toBeTruthy();
+  });
+});

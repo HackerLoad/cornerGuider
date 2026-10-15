@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFormat } from '../i18n';
 import { applyOrientation } from '../services/orientation';
+import { shareTextFile } from '../services/exporter';
 import { speakWithSettings, voicesFor, type Voice } from '../services/speech';
+import { useFeedbackStore } from '../stores/feedbackStore';
 import { currentDriveSettings, useSettingsStore } from '../stores/settingsStore';
 import { exampleAnnouncement } from '../voice/phrases';
 import { colors } from '../theme';
@@ -11,6 +13,8 @@ import { ButtonRow, ChoiceRow, Section, StepperRow, ToggleRow, clamp } from './S
 export function SettingsView() {
   const s = useSettingsStore();
   const f = useFormat();
+  const marks = useFeedbackStore((m) => m.marks);
+  const clearMarks = useFeedbackStore((m) => m.clear);
   const [voices, setVoices] = useState<Voice[]>([]);
   const [showVoices, setShowVoices] = useState(false);
 
@@ -137,6 +141,38 @@ export function SettingsView() {
           onMinus={() => s.set({ listCount: clamp(s.listCount - 1, 0, 4) })}
           onPlus={() => s.set({ listCount: clamp(s.listCount + 1, 0, 4) })}
         />
+      </Section>
+
+      <Section title={f.t('set.sec.feedback')}>
+        <ToggleRow
+          label={f.t('set.feedbackButtons')}
+          note={f.t('set.feedbackButtonsNote')}
+          value={s.showFeedbackButtons}
+          onChange={(v) => s.set({ showFeedbackButtons: v })}
+        />
+        <ButtonRow
+          label={f.t('set.exportFeedback')}
+          note={f.t('set.exportFeedbackNote', { count: marks.length })}
+          onPress={() =>
+            void shareTextFile(
+              'cornerguider-feedback.json',
+              JSON.stringify({ app: 'cornerGuider', kind: 'marks', version: 1, marks }),
+              f.t('set.exportFeedback'),
+            ).catch(() => Alert.alert(f.t('fb.exportFailed')))
+          }
+        />
+        {marks.length > 0 ? (
+          <ButtonRow
+            label={f.t('set.clearFeedback')}
+            danger
+            onPress={() =>
+              Alert.alert(f.t('set.clearFeedbackTitle'), undefined, [
+                { text: f.t('common.cancel'), style: 'cancel' },
+                { text: f.t('common.delete'), style: 'destructive', onPress: clearMarks },
+              ])
+            }
+          />
+        ) : null}
       </Section>
 
       <Section title={f.t('set.sec.other')}>

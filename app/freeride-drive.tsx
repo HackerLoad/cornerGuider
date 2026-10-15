@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { CurveGraphic } from '../src/components/CurveGraphic';
 import { DriveLayout } from '../src/components/DriveLayout';
+import { FeedbackBar } from '../src/components/FeedbackBar';
+import { useFeedbackStore } from '../src/stores/feedbackStore';
 import { SimulatedLocationSource } from '../src/drive/simulator';
 import { FreerideSession, type FreerideSnapshot } from '../src/freeride/session';
 import { AppError, errorMessage } from '../src/errors';
@@ -61,6 +63,8 @@ export default function FreerideDrive() {
   const driveSide = useSettingsStore((s) => s.driveSide);
   const showRidingLine = useSettingsStore((s) => s.showRidingLine);
   const listCount = useSettingsStore((s) => s.listCount);
+  const showFeedback = useSettingsStore((s) => s.showFeedbackButtons);
+  const addMark = useFeedbackStore((s) => s.add);
   const [snap, setSnap] = useState<FreerideSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [session, setSession] = useState<FreerideSession | null>(null);
@@ -178,12 +182,23 @@ export default function FreerideDrive() {
         ) : null
       }
       footer={
+        <View>
+          {showFeedback ? (
+            <FeedbackBar
+              onMark={(kind) => {
+                const m = session?.makeMark(kind);
+                if (m) addMark(m);
+                return !!m;
+              }}
+            />
+          ) : null}
         <View style={styles.footer}>
           <View>
             <Text style={styles.footerText}>{snap ? f.speed(snap.speed) : ''}</Text>
             <Text style={styles.attribution}>{f.t('free.driveAttribution')}</Text>
           </View>
           <Pressable onPress={confirmStop} style={styles.stop}><Text style={styles.stopText}>{f.t('drive.end')}</Text></Pressable>
+        </View>
         </View>
       }
     />

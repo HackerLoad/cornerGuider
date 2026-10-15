@@ -39,6 +39,8 @@ export interface DisplaySettings {
   orientation: OrientationMode;
   /** Sprache der Bedienoberfläche (auto = Gerätesprache) */
   uiLanguage: UiLanguage;
+  /** Rückmeldeknöpfe (Falsch / Fehlt) im Fahrmodus, für den Beifahrer */
+  showFeedbackButtons: boolean;
 }
 
 export const DEFAULT_DRIVE_SETTINGS: DriveSettings = {
@@ -60,4 +62,5 @@ export const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = {
   listCount: 3,
   orientation: 'auto',
   uiLanguage: 'auto',
+  showFeedbackButtons: false,
 };

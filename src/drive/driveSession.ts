@@ -1,3 +1,4 @@
+import { buildMark, type FeedbackMark, type MarkKind } from '../feedback/model';
 import type { DriveSettings } from '../settings';
 import { gpsProfileForSpeed, sameProfile, type GpsProfile } from '../tracking/adaptiveGps';
 import { nextCurves, type UpcomingCurve } from '../tracking/nextCurves';
@@ -37,6 +38,7 @@ export class DriveSession {
   private standingSince: number | null = null;
   private lastStatus: TrackStatus = 'acquiring';
   private running = false;
+  private lastFix: Fix | null = null;
 
   snapshot: DriveSnapshot = { status: 'acquiring', dist: 0, remaining: 0, speed: 0, offset: 0, upcoming: [] };
 
@@ -63,8 +65,20 @@ export class DriveSession {
     await this.o.source.stop();
   }
 
+  /** Markierung (falsch / fehlt) an der letzten Position, mit Entfernung auf der Strecke. */
+  makeMark(kind: MarkKind, routeId: string): FeedbackMark | null {
+    if (!this.lastFix) return null;
+    const first = this.snapshot.status === 'onRoute' ? this.snapshot.upcoming[0] : undefined;
+    return buildMark(kind, 'route', this.lastFix, {
+      routeId,
+      distAlongM: this.snapshot.dist,
+      curve: first ? { direction: first.curve.direction, grade: first.curve.grade } : undefined,
+    });
+  }
+
   onFix(fix: Fix): void {
     if (!this.running) return;
+    this.lastFix = fix;
     const now = this.now();
     const st = this.tracker.update(fix, now);
     const settings = this.o.getSettings();

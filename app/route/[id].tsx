@@ -7,6 +7,7 @@ import { warningText } from '../../src/routes/warningText';
 import type { StoredRoute } from '../../src/routes/model';
 import { loadRoute } from '../../src/services/routeStorage';
 import { useRoutesStore } from '../../src/stores/routesStore';
+import { useFeedbackStore } from '../../src/stores/feedbackStore';
 import { useSettingsStore } from '../../src/stores/settingsStore';
 import { colors } from '../../src/theme';
 
@@ -16,6 +17,9 @@ export default function RouteOverview() {
   const setSettings = useSettingsStore((s) => s.set);
   const activeId = useSettingsStore((s) => s.activeRouteId);
   const remove = useRoutesStore((s) => s.remove);
+  const allMarks = useFeedbackStore((s) => s.marks);
+  const removeMark = useFeedbackStore((s) => s.remove);
+  const routeMarks = allMarks.filter((m) => m.routeId === id);
   const [route, setRoute] = useState<StoredRoute | null | undefined>(undefined);
 
   useEffect(() => {
@@ -95,9 +99,30 @@ export default function RouteOverview() {
         }
         renderItem={({ item }) => <CurveRow curve={item} />}
         ListFooterComponent={
-          <Pressable onPress={confirmDelete} style={{ paddingVertical: 20 }}>
-            <Text style={styles.delete}>{f.t('route.delete')}</Text>
-          </Pressable>
+          <View>
+            {routeMarks.length > 0 ? (
+              <View style={{ marginTop: 12, gap: 6 }}>
+                <Text style={styles.summary}>{f.t('route.feedback')}</Text>
+                {routeMarks.map((m) => (
+                  <View key={m.id} style={styles.markRow}>
+                    <Text style={styles.markText}>
+                      {f.t('route.feedbackItem', {
+                        kind: f.t(m.kind === 'wrong' ? 'fb.mark.wrong' : 'fb.mark.missing'),
+                        curve: m.curve ? ` · ${f.dir(m.curve.direction)} ${m.curve.grade}` : '',
+                        position: f.km(m.distAlongM ?? 0),
+                      })}
+                    </Text>
+                    <Pressable onPress={() => removeMark(m.id)} hitSlop={10}>
+                      <Text style={styles.delete}>{f.t('common.delete')}</Text>
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+            <Pressable onPress={confirmDelete} style={{ paddingVertical: 20 }}>
+              <Text style={styles.delete}>{f.t('route.delete')}</Text>
+            </Pressable>
+          </View>
         }
       />
     </View>
@@ -111,6 +136,8 @@ const styles = StyleSheet.create({
   summary: { color: colors.text, fontSize: 20, fontWeight: '700' },
   warning: { color: colors.warn, fontSize: 14, marginTop: 8, lineHeight: 20 },
   button: { backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginTop: 14 },
+  markRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, backgroundColor: colors.card, borderRadius: 12, padding: 12 },
+  markText: { color: colors.text, fontSize: 15, flex: 1 },
   goInfo: { color: colors.muted, fontSize: 13, marginTop: 8, textAlign: 'center' },
   secondary: { backgroundColor: colors.card, marginTop: 8 },
   buttonText: { color: '#000', fontSize: 17, fontWeight: '800' },

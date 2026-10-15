@@ -19,7 +19,7 @@ describe('Wörterbuch', () => {
     // in beiden Sprachen gleich lautende Texte (Fremdwörter, Einheiten, Satzbau mit Platzhaltern)
     const allowed = new Set<TextKey>([
       'set.units.metric', 'set.units.imperial', 'route.title', 'tabs.go', 'import.title', 'live.dirGrade',
-      'go.simulation', 'drive.in', 'sim.label', 'sim.pause', 'result.distanceTime', 'live.in',
+      'go.simulation', 'drive.in', 'sim.label', 'sim.pause', 'result.distanceTime', 'live.in', 'fb.markItem',
     ]);
     expect(keys.filter((k) => en[k] === de[k] && !allowed.has(k))).toEqual([]);
     for (const k of keys) {

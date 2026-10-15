@@ -83,3 +83,16 @@ describe('DriveSession', () => {
     expect(spoken).toHaveLength(0);
   });
 });
+
+describe('DriveSession: Markierungen', () => {
+  it('Markierung enthält Strecke, Entfernung entlang der Route und die nächste Kurve', async () => {
+    const { session, drive } = setup();
+    expect(session.makeMark('wrong', 'r1')).toBeNull();
+    await session.start();
+    drive(150);
+    const m = session.makeMark('wrong', 'r1')!;
+    expect(m).toMatchObject({ kind: 'wrong', source: 'route', routeId: 'r1' });
+    expect(m.distAlongM).toBeGreaterThan(100);
+    expect(m.curve?.direction).toBe('right');
+  });
+});

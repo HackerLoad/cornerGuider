@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { CurveGraphic } from '../../src/components/CurveGraphic';
 import { DriveLayout } from '../../src/components/DriveLayout';
+import { FeedbackBar } from '../../src/components/FeedbackBar';
+import { useFeedbackStore } from '../../src/stores/feedbackStore';
 import { DriveSession, type DriveSnapshot } from '../../src/drive/driveSession';
 import { SimulatedLocationSource } from '../../src/drive/simulator';
 import { errorMessage } from '../../src/errors';
@@ -37,6 +39,9 @@ export default function DriveScreen() {
   const driveSide = useSettingsStore((s) => s.driveSide);
   const showRidingLine = useSettingsStore((s) => s.showRidingLine);
   const listCount = useSettingsStore((s) => s.listCount);
+  const showFeedback = useSettingsStore((s) => s.showFeedbackButtons);
+  const addMark = useFeedbackStore((s) => s.add);
+  const [session, setSession] = useState<DriveSession | null>(null);
   const isSim = simParam === '1';
   const [sim, setSim] = useState<SimulatedLocationSource | null>(null);
   const [, setSimTick] = useState(0); // erzwingt Neuzeichnen nach Änderungen am Simulator
@@ -70,6 +75,7 @@ export default function DriveScreen() {
           speak: (t) => speakWithSettings(t),
           getSettings: currentDriveSettings,
         });
+        setSession(session);
         unsub = session.subscribe(setSnap);
         await session.start();
       } catch (e) {
@@ -158,11 +164,22 @@ export default function DriveScreen() {
         ) : null
       }
       footer={
+        <View>
+          {showFeedback ? (
+            <FeedbackBar
+              onMark={(kind) => {
+                const m = session?.makeMark(kind, id);
+                if (m) addMark(m);
+                return !!m;
+              }}
+            />
+          ) : null}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
             {snap ? f.t('drive.speedRest', { speed: f.speed(snap.speed), rest: f.dist(snap.remaining) }) : ''}
           </Text>
           <Pressable onPress={confirmStop} style={styles.stop}><Text style={styles.stopText}>{f.t('drive.end')}</Text></Pressable>
+        </View>
         </View>
       }
     />

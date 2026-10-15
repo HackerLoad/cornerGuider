@@ -2,6 +2,7 @@ import type { LocationSource } from '../drive/locationSource';
 import { dist } from '../geo/polyline';
 import type { LatLon, XY } from '../geo/types';
 import type { DriveSettings } from '../settings';
+import { buildMark, type CurveRating, type FeedbackMark, type MarkKind } from '../feedback/model';
 import type { Fix } from '../tracking/routeTracker';
 import { announceSettingsFrom } from '../voice/announceScheduler';
 import { FreeAnnouncer } from '../voice/freeAnnouncer';
@@ -57,6 +58,8 @@ export interface FreerideRecording {
   fixes: RecordedFix[];
   announcements: RecordedAnnouncement[];
   stats: FreerideStats;
+  /** Bewertungen der angesagten Kurven nach der Fahrt (Schlüssel siehe feedback/model.ts) */
+  ratings?: Record<string, CurveRating>;
 }
 
 export interface FreerideSessionOptions {
@@ -99,6 +102,7 @@ export class FreerideSession {
   private dataErrorRaw: unknown;
   private lastSpoken: string | undefined;
   private running = false;
+  private lastFix: Fix | null = null;
   private startedAt = 0;
   private readonly fixes: RecordedFix[] = [];
   private readonly announcements: RecordedAnnouncement[] = [];
@@ -127,6 +131,15 @@ export class FreerideSession {
     await this.o.source.stop();
   }
 
+  /** Markierung (falsch / fehlt) an der letzten Position; null, solange noch kein GPS vorliegt. */
+  makeMark(kind: MarkKind): FeedbackMark | null {
+    if (!this.lastFix) return null;
+    const first = this.snapshot.status === 'ok' ? this.snapshot.upcoming[0] : undefined;
+    return buildMark(kind, 'free', this.lastFix, {
+      curve: first ? { direction: first.curve.direction, grade: first.curve.grade } : undefined,
+    });
+  }
+
   getRecording(): FreerideRecording | null {
     if (!this.graph) return null;
     return {
@@ -149,6 +162,7 @@ export class FreerideSession {
     }
     const graph = this.graph;
     const engine = this.engine!;
+    this.lastFix = fix;
     const t = this.now();
     this.fixes.push({ t, lat: fix.lat, lon: fix.lon, speed: fix.speed });
 
