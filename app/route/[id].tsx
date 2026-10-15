@@ -6,12 +6,14 @@ import { formatKm } from '../../src/format';
 import type { StoredRoute } from '../../src/routes/model';
 import { loadRoute } from '../../src/services/routeStorage';
 import { useRoutesStore } from '../../src/stores/routesStore';
-import { useUnits } from '../../src/stores/settingsStore';
+import { useSettingsStore, useUnits } from '../../src/stores/settingsStore';
 import { colors } from '../../src/theme';
 
 export default function RouteOverview() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const units = useUnits();
+  const setSettings = useSettingsStore((s) => s.set);
+  const activeId = useSettingsStore((s) => s.activeRouteId);
   const remove = useRoutesStore((s) => s.remove);
   const [route, setRoute] = useState<StoredRoute | null | undefined>(undefined);
 
@@ -46,7 +48,7 @@ export default function RouteOverview() {
         style: 'destructive',
         onPress: () => {
           remove(route.id);
-          router.replace('/');
+          router.replace('/routes');
         },
       },
     ]);
@@ -72,6 +74,16 @@ export default function RouteOverview() {
             >
               <Text style={styles.buttonText}>Fahrt starten</Text>
             </Pressable>
+            {activeId !== route.id ? (
+              <Pressable
+                style={[styles.button, styles.secondary]}
+                onPress={() => setSettings({ activeRouteId: route.id, goMode: 'route' })}
+              >
+                <Text style={[styles.buttonText, { color: colors.accent }]}>Als Go-Strecke wählen</Text>
+              </Pressable>
+            ) : (
+              <Text style={styles.goInfo}>Diese Strecke fährt der Go-Knopf.</Text>
+            )}
             <Pressable
               style={[styles.button, styles.secondary]}
               onPress={() => router.push({ pathname: '/drive/[id]', params: { id: route.id, sim: '1' } })}
@@ -98,6 +110,7 @@ const styles = StyleSheet.create({
   summary: { color: colors.text, fontSize: 20, fontWeight: '700' },
   warning: { color: colors.warn, fontSize: 14, marginTop: 8, lineHeight: 20 },
   button: { backgroundColor: colors.accent, borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginTop: 14 },
+  goInfo: { color: colors.muted, fontSize: 13, marginTop: 8, textAlign: 'center' },
   secondary: { backgroundColor: colors.card, marginTop: 8 },
   buttonText: { color: '#000', fontSize: 17, fontWeight: '800' },
   delete: { color: colors.danger, textAlign: 'center', fontSize: 16 },

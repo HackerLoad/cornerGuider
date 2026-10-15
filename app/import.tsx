@@ -32,7 +32,7 @@ export default function ImportScreen() {
         <>
           <Text style={styles.error}>Import fehlgeschlagen</Text>
           <Text style={styles.text}>{error}</Text>
-          <Pressable style={styles.button} onPress={() => router.replace('/')}>
+          <Pressable style={styles.button} onPress={() => router.replace('/routes')}>
             <Text style={styles.buttonText}>Zur Routenliste</Text>
           </Pressable>
         </>

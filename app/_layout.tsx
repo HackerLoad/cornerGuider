@@ -46,9 +46,8 @@ export default function RootLayout() {
           contentStyle: { backgroundColor: colors.bg },
         }}
       >
-        <Stack.Screen name="index" options={{ title: 'cornerGuider' }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="import" options={{ title: 'Import', presentation: 'modal' }} />
-        <Stack.Screen name="settings" options={{ title: 'Einstellungen' }} />
         <Stack.Screen name="route/[id]" options={{ title: 'Route' }} />
         <Stack.Screen name="drive/[id]" options={{ headerShown: false, gestureEnabled: false }} />
         <Stack.Screen name="freeride" options={{ title: 'Freie Fahrt' }} />
