@@ -4,9 +4,11 @@ import type { LatLon, XY } from '../geo/types';
 import type { DriveSettings } from '../settings';
 import { buildMark, type CurveRating, type FeedbackMark, type MarkKind } from '../feedback/model';
 import type { Fix } from '../tracking/routeTracker';
-import { announceSettingsFrom } from '../voice/announceScheduler';
+import { announceSettingsFrom, leadDistance } from '../voice/announceScheduler';
+import { systemPhrase } from '../voice/phrases';
 import { FreeAnnouncer } from '../voice/freeAnnouncer';
 import { FreerideEngine, type FreerideState } from './engine';
+import { PreviewMonitor } from './previewMonitor';
 import { fetchOverpass } from './overpassClient';
 import { buildTileQuery, tileKey, tilesNear, type Tile } from './tiles';
 import { RoadGraph } from './roadGraph';
@@ -23,6 +25,8 @@ export interface FreerideSnapshot extends FreerideState {
   lastSpoken?: string;
   /** m/s (0 wenn unbekannt) */
   speed: number;
+  /** Ob die Vorschau gerade fehlt (Kreuzung, keine Daten, Straße unsicher) – nach Entprellung */
+  previewLost: boolean;
 }
 
 export interface RecordedFix {
@@ -87,6 +91,7 @@ const initialSnapshot = (xy: XY): FreerideSnapshot => ({
   upcoming: [],
   data: 'loading',
   speed: 0,
+  previewLost: false,
 });
 
 /** Freie Fahrt: Positionen → Straßendaten (OSM) laden → Kurven vorhersagen → ansagen → aufzeichnen. */
@@ -94,6 +99,7 @@ export class FreerideSession {
   private graph: RoadGraph | null = null;
   private engine: FreerideEngine | null = null;
   private readonly announcer = new FreeAnnouncer();
+  private readonly preview = new PreviewMonitor();
   private readonly now: () => number;
   private listeners = new Set<(s: FreerideSnapshot) => void>();
   /** Zustand je Kachel: wartet, wird geladen oder ist da */
@@ -184,13 +190,26 @@ export class FreerideSession {
       if (settings.voiceEnabled) this.o.speak(a.text);
     }
 
+    // Stille darf nicht als „gerade" verstanden werden: Ausfall und Rückkehr der Vorschau je einmal melden
+    const ev = this.preview.update({
+      ok: state.status === 'ok',
+      aheadM: state.aheadM,
+      leadM: leadDistance(fix.speed ?? 0, announceSettingsFrom(settings)),
+      speedMs: fix.speed ?? 0,
+    });
+    if (ev) {
+      const text = systemPhrase(ev === 'lost' ? 'noPreview' : 'previewBack', settings.voiceLanguage);
+      this.lastSpoken = text;
+      if (settings.voiceEnabled) this.o.speak(text);
+    }
+
     const data: DataStatus = this.dataStatus(fix);
     this.stats.steps++;
     if (data === 'loading' && state.status === 'noRoad') this.stats.loading++;
     else this.stats[state.status]++;
     if (state.endReason) this.stats.endReasons[state.endReason] = (this.stats.endReasons[state.endReason] ?? 0) + 1;
 
-    this.emit({ ...state, data, dataError: this.dataError, dataErrorRaw: this.dataErrorRaw, lastSpoken: this.lastSpoken, speed: fix.speed ?? 0 });
+    this.emit({ ...state, data, dataError: this.dataError, dataErrorRaw: this.dataErrorRaw, lastSpoken: this.lastSpoken, speed: fix.speed ?? 0, previewLost: this.preview.lost });
   }
 
   private emit(s: FreerideSnapshot): void {

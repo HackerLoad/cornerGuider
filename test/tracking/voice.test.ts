@@ -1,6 +1,6 @@
 import { detectCurves } from '../../src/curves';
 import { AnnounceScheduler, leadDistance, DEFAULT_ANNOUNCE_SETTINGS } from '../../src/voice/announceScheduler';
-import { announcementText, spokenDistance } from '../../src/voice/phrases';
+import { announcementText, spokenDistance, systemPhrase } from '../../src/voice/phrases';
 import { TrackBuilder } from '../curves/helpers';
 
 const t = new TrackBuilder()
@@ -31,6 +31,31 @@ describe('Phrasen', () => {
     const txt = announcementText(curves[0]!, 150, [curves[1]!]);
     expect(txt).toMatch(/^In 150 Metern Rechts \d/);
     expect(txt).toContain('danach links');
+  });
+});
+
+describe('Unsichere Kurven', () => {
+  const uncertain = { ...curves[0]!, confidence: 0.2 };
+  const sure = { ...curves[0]!, confidence: 0.9 };
+  it('sagt „Kurve, unsicher" statt der Stufe', () => {
+    const txt = announcementText(uncertain, 150);
+    expect(txt).toBe('In 150 Metern Kurve, unsicher');
+    expect(txt).not.toMatch(/\d$/);
+    expect(announcementText(sure, 150)).toMatch(/Rechts \d/);
+  });
+  it('englisch und im kurzen Stil', () => {
+    const en = { language: 'en', style: 'short', shape: false, units: 'metric' } as const;
+    expect(announcementText(uncertain, 150, [], en)).toBe('Curve, uncertain');
+  });
+  it('unsichere Folgekurve wird ebenfalls ohne Stufe genannt', () => {
+    const txt = announcementText(sure, 150, [{ ...curves[1]!, confidence: 0.1 }]);
+    expect(txt).toContain('danach kurve, unsicher');
+  });
+  it('Hinweise zur Vorschau', () => {
+    expect(systemPhrase('noPreview', 'de')).toBe('Keine Vorschau');
+    expect(systemPhrase('previewBack', 'de')).toBe('Vorschau wieder da');
+    expect(systemPhrase('noPreview', 'en')).toBe('No preview');
+    expect(systemPhrase('previewBack', 'en')).toBe('Preview back');
   });
 });
 

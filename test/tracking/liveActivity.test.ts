@@ -62,7 +62,7 @@ describe('Zuordnung der Fahrzustände', () => {
     status, dist: 0, remaining: 0, speed: 0, offset: 0, upcoming,
   });
   const free = (over: Partial<FreerideSnapshot>): FreerideSnapshot => ({
-    status: 'ok', riderXY: { x: 0, y: 0 }, heading: 0, aheadM: 0, riderDist: 0, upcoming: [], data: 'ready', speed: 0, ...over,
+    status: 'ok', riderXY: { x: 0, y: 0 }, heading: 0, aheadM: 0, riderDist: 0, upcoming: [], data: 'ready', speed: 0, previewLost: false, ...over,
   });
 
   it('geplante Route', () => {

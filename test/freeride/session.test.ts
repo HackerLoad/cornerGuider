@@ -6,6 +6,7 @@ import { evaluateRecording } from '../../src/freeride/evaluateRecording';
 import { parseOverpass } from '../../src/freeride/overpassClient';
 import { FreerideSession } from '../../src/freeride/session';
 import { parseGpx } from '../../src/gpx/parseGpx';
+import { makeProjection } from '../../src/geo/projection';
 import { DEFAULT_DRIVE_SETTINGS } from '../../src/settings';
 
 const fx = (n: string) => readFileSync(join(__dirname, '../fixtures', n), 'utf8');
@@ -51,7 +52,9 @@ describe('FreerideSession', () => {
 
     const rec = session.getRecording()!;
     expect(rec.fixes.length).toBeGreaterThan(250);
-    expect(rec.announcements.length).toBe(spoken.length);
+    const notices = spoken.filter((t) => /Vorschau/.test(t));
+    expect(rec.announcements.length).toBe(spoken.length - notices.length); // Hinweise zur Vorschau sind keine Kurvenansagen
+    expect(notices.length).toBeLessThanOrEqual(4); // jeder Wechsel nur einmal, kein Dauerwiederholen
     expect(rec.stats.steps).toBe(rec.fixes.length);
     expect(rec.stats.ok / rec.stats.steps).toBeGreaterThan(0.8);
 
@@ -105,6 +108,43 @@ describe('FreerideSession', () => {
     for (let i = 0; i < 150; i++) await step();
     await sim.stop();
     expect(loadTile.mock.calls.length).toBeGreaterThan(1);
+  });
+});
+
+describe('Vorschau fällt aus', () => {
+  it('meldet das Ende der Vorschau genau einmal, wenn die Straßendaten enden', async () => {
+    // Nur Straßen entlang der ersten 1500 m der Route kennen: danach fehlen die Daten
+    const proj = makeProjection(route.projectionOrigin);
+    const known = det.path.filter((_, i) => det.dist[i]! <= 1500);
+    const covered = ways.filter((w) =>
+      w.geometry.some((p) => {
+        const q = proj.toXY(p);
+        return known.some((k) => Math.hypot(k.x - q.x, k.y - q.y) < 150);
+      }),
+    );
+    expect(covered.length).toBeGreaterThan(0);
+    expect(covered.length).toBeLessThan(ways.length);
+
+    const { session, spoken, step, sim } = setup(async () => covered);
+    await session.start();
+    await flush();
+    for (let i = 0; i < 280; i++) await step();
+    await sim.stop();
+
+    expect(spoken.filter((t) => t === 'Keine Vorschau')).toHaveLength(1);
+    expect(spoken.filter((t) => t === 'Vorschau wieder da')).toHaveLength(0);
+    expect(session.snapshot.previewLost).toBe(true);
+    // der Hinweis kommt nach den Kurvenansagen, nicht davor
+    expect(spoken.indexOf('Keine Vorschau')).toBeGreaterThan(0);
+  });
+
+  it('ohne jede Straßenabdeckung gibt es keinen Hinweis (es gab nie eine Vorschau)', async () => {
+    const { session, spoken, step, sim } = setup(async () => []);
+    await session.start();
+    await flush();
+    for (let i = 0; i < 60; i++) await step();
+    await sim.stop();
+    expect(spoken).toHaveLength(0);
   });
 });
 

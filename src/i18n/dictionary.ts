@@ -59,6 +59,7 @@ export const de = {
   'curve.details': '{radius} · {angle}° · {length} lang',
   'curve.sequence': 'Folge: {gap} nach der vorigen Kurve',
   'curve.fromStart': 'ab Start',
+  'curve.uncertain': 'unsicher',
 
   // Warnungen beim Import
   'warn.sparse': 'Die Datei enthält nur wenige Punkte (Ø {spacing} Abstand). Kurven können fehlen oder ungenau sein – bitte den Track statt der Route exportieren.',
@@ -101,6 +102,7 @@ export const de = {
   'free.noRoad': 'Keine Straße erkannt',
   'free.uncertain': 'Straße unsicher – keine Ansage',
   'free.noCurve': 'Keine Kurve voraus',
+  'free.noPreview': 'Keine Vorschau',
   'free.junction': 'Kreuzung in {distance}',
   'free.roundabout': 'Kreisverkehr in {distance}',
   'free.dataEnd': 'Datenende in {distance}',
@@ -334,6 +336,7 @@ export const en: Record<TextKey, string> = {
   'curve.details': '{radius} · {angle}° · {length} long',
   'curve.sequence': 'Sequence: {gap} after the previous curve',
   'curve.fromStart': 'from start',
+  'curve.uncertain': 'uncertain',
 
   'warn.sparse': 'The file has only a few points (avg. {spacing} apart). Curves may be missing or inaccurate – please export the track instead of the route.',
   'warn.routeNoTrack': 'The file contains a route without a recorded track; accuracy depends on the export.',
@@ -373,6 +376,7 @@ export const en: Record<TextKey, string> = {
   'free.noRoad': 'No road detected',
   'free.uncertain': 'Road uncertain – no announcement',
   'free.noCurve': 'No curve ahead',
+  'free.noPreview': 'No preview',
   'free.junction': 'Junction in {distance}',
   'free.roundabout': 'Roundabout in {distance}',
   'free.dataEnd': 'Data ends in {distance}',

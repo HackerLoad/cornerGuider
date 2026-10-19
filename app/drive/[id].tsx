@@ -2,6 +2,8 @@ import { useKeepAwake } from 'expo-keep-awake';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { DEFAULT_CURVE_CONFIG } from '../../src/curves/config';
+import { isUncertain } from '../../src/curves/confidence';
 import { CurveGraphic } from '../../src/components/CurveGraphic';
 import { DriveLayout } from '../../src/components/DriveLayout';
 import { FeedbackBar } from '../../src/components/FeedbackBar';
@@ -128,7 +130,7 @@ export default function DriveScreen() {
         ) : first ? (
           <Text style={styles.big} {...ONE_LINE}>
             {first.inside ? f.t('drive.now') : f.t('drive.in', { distance: f.dist(Math.round(first.distanceTo / 10) * 10) })}:{' '}
-            {f.dir(first.curve.direction)} {first.curve.grade}
+            {f.dir(first.curve.direction)} {isUncertain(first.curve.confidence, DEFAULT_CURVE_CONFIG) ? f.t('curve.uncertain') : first.curve.grade}
           </Text>
         ) : (
           <Text style={styles.big} {...ONE_LINE}>{f.t('drive.noMore')}</Text>
@@ -141,7 +143,9 @@ export default function DriveScreen() {
       }
       list={rest.map((u) => (
         <View key={u.curve.index} style={styles.item}>
-          <Text style={[styles.itemGrade, { color: colors.grade[u.curve.grade - 1] }]}>{u.curve.grade}</Text>
+          <Text style={[styles.itemGrade, { color: isUncertain(u.curve.confidence, DEFAULT_CURVE_CONFIG) ? colors.muted : colors.grade[u.curve.grade - 1] }]}>
+            {isUncertain(u.curve.confidence, DEFAULT_CURVE_CONFIG) ? '?' : u.curve.grade}
+          </Text>
           <Text style={styles.itemText}>{f.dir(u.curve.direction)}</Text>
           <Text style={styles.itemDist}>{f.t('drive.in', { distance: f.dist(Math.round(u.distanceTo / 10) * 10) }).toLowerCase()}</Text>
         </View>

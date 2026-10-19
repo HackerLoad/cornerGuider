@@ -1,9 +1,13 @@
+import { DEFAULT_CURVE_CONFIG } from '../curves/config';
+import { isUncertain } from '../curves/confidence';
 import type { Units, VoiceLanguage, AnnounceStyle } from '../settings';
 
 export interface CurveInfo {
   direction: 'left' | 'right';
   grade: number;
   shape: 'tightening' | 'opening' | 'constant';
+  /** Verlässlichkeit der Stufe (0–1); fehlt der Wert, gilt die Stufe als sicher */
+  confidence?: number;
 }
 
 export interface PhraseOptions {
@@ -21,17 +25,19 @@ const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 const WORDS = {
   de: {
     left: 'links', right: 'rechts', hairpin: 'Spitzkehre', tightening: 'zieht zu', opening: 'öffnet',
-    then: 'danach', in: 'In', meters: 'Metern', feet: 'Fuß', miles: 'Meilen',
+    then: 'danach', in: 'In', uncertain: 'Kurve, unsicher', meters: 'Metern', feet: 'Fuß', miles: 'Meilen',
   },
   en: {
     left: 'left', right: 'right', hairpin: 'Hairpin', tightening: 'tightening', opening: 'opening',
-    then: 'then', in: 'In', meters: 'meters', feet: 'feet', miles: 'miles',
+    then: 'then', in: 'In', uncertain: 'Curve, uncertain', meters: 'meters', feet: 'feet', miles: 'miles',
   },
 } as const;
 
 /** Einzelne Kurve: „Rechts 3, zieht zu", „Spitzkehre links" bzw. englisch „Right 3, tightening", „Hairpin left". */
 export function curvePhrase(c: CurveInfo, withShape = true, language: VoiceLanguage = 'de'): string {
   const w = WORDS[language];
+  // Unsichere Geometrie: lieber keine Stufe nennen als eine falsche
+  if (c.confidence !== undefined && isUncertain(c.confidence, DEFAULT_CURVE_CONFIG)) return w.uncertain;
   const dir = c.direction === 'left' ? w.left : w.right;
   const base = c.grade === 1 ? `${w.hairpin} ${dir}` : `${cap(dir)} ${c.grade}`;
   if (!withShape || c.shape === 'constant') return base;
@@ -73,11 +79,20 @@ export function announcementText(
   return `${head}, ${w.then} ${tail.join(`, ${w.then} `)}`;
 }
 
-/** Kurze Systemansagen (Abweichung, Rückkehr, Ziel) in der Ansagesprache. */
-export function systemPhrase(kind: 'offRoute' | 'backOnRoute' | 'finished', language: VoiceLanguage): string {
+/** Kurze Systemansagen (Abweichung, Rückkehr, Ziel, Vorschau fehlt/zurück) in der Ansagesprache. */
+export function systemPhrase(
+  kind: 'offRoute' | 'backOnRoute' | 'finished' | 'noPreview' | 'previewBack',
+  language: VoiceLanguage,
+): string {
   const texts = {
-    de: { offRoute: 'Abseits der Route', backOnRoute: 'Wieder auf der Route', finished: 'Ziel erreicht' },
-    en: { offRoute: 'Off route', backOnRoute: 'Back on route', finished: 'Destination reached' },
+    de: {
+      offRoute: 'Abseits der Route', backOnRoute: 'Wieder auf der Route', finished: 'Ziel erreicht',
+      noPreview: 'Keine Vorschau', previewBack: 'Vorschau wieder da',
+    },
+    en: {
+      offRoute: 'Off route', backOnRoute: 'Back on route', finished: 'Destination reached',
+      noPreview: 'No preview', previewBack: 'Preview back',
+    },
   } as const;
   return texts[language][kind];
 }

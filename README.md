@@ -46,12 +46,14 @@ Stand der Review-Runde 2026-10 (siehe `docs/review-2026-10.md`). Wird nach jeder
 - Kurvengrafik-Layout, Dateiimport, Tabs/Einstellungen und Live-Aktivität auf einem Gerät: ungesehen.
 - Freie Fahrt mit echtem Fahrzeug-GPS: nur eine kurze Autofahrt.
 - Store-Builds über EAS: nicht ausgelöst.
+- Konfidenz (A1): Schwellwerte in `src/curves/config.ts` sind geschätzt. Die gestrichelte Darstellung unsicherer Kurven und die Ansagen „Kurve, unsicher" / „Keine Vorschau" wurden nicht auf einem Gerät gesehen oder gehört. Die Live-Aktivität zeigt für unsichere Kurven weiterhin die Stufe (bewusst nicht angefasst, siehe Feature-Stopp).
 
 ### Messwerte Kurvenerkennung (CLI, `test/fixtures/*.gpx`)
 
 | Stand | Stelvio (Kurven / Stufen 1–6) | Amalfi (Kurven / Stufen 1–6) |
 | --- | --- | --- |
 | Vor der Review-Runde (19.10.2026) | 235 / 71·20·60·57·24·3 | 358 / 34·155·108·51·9·1 |
+| Nach A1 (Stufen unverändert) | 235, davon 26 unsicher (Konfidenz < 0,4) | 358, davon 11 unsicher |
 
 ## Stack
 

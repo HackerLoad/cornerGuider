@@ -4,6 +4,7 @@ import type { LatLon, XY } from '../geo/types';
 import { gradeForRadius } from './classify';
 import { markSequences } from './combine';
 import { DEFAULT_CURVE_CONFIG, type CurveConfig } from './config';
+import { geometryConfidence } from './confidence';
 import { signedCurvature } from './radius';
 import type { Curve, DetectionResult, Direction, Shape } from './types';
 
@@ -55,15 +56,38 @@ function analyze(rawXY: XY[], origin: LatLon, config: Partial<CurveConfig>): Det
   const runs = buildRuns(curvature, minCurv, Math.round(cfg.mergeGapM / cfg.resampleStepM));
 
   // 5. Kennwerte
+  const maxGap = maxNodeGapFn(xy, length);
   const curves: Curve[] = [];
   for (const run of runs) {
-    const curve = buildCurve(run, path, dist, curvature, cfg);
+    const curve = buildCurve(run, path, dist, curvature, cfg, maxGap);
     if (curve) curves.push(curve);
   }
   curves.forEach((c, i) => (c.index = i));
 
   markSequences(curves, cfg);
   return { curves, length, path, dist, projectionOrigin: origin };
+}
+
+/**
+ * Liefert eine Funktion, die den größten Abstand der ORIGINAL-Knoten (vor dem Resampling) in einem
+ * Streckenbereich der resampelten Linie ermittelt. Große Abstände = grob gezeichnete Straße.
+ */
+function maxNodeGapFn(original: XY[], resampledLength: number): (fromDist: number, toDist: number) => number {
+  const nodeDist = cumulativeLengths(original);
+  const total = nodeDist[nodeDist.length - 1] ?? 0;
+  // Das Resampeln kürzt Kurven minimal; die Strecken werden auf die Originallänge umgerechnet.
+  const scale = resampledLength > 0 ? total / resampledLength : 1;
+  return (fromDist, toDist) => {
+    const a = fromDist * scale;
+    const b = toDist * scale;
+    let gap = 0;
+    for (let i = 1; i < nodeDist.length; i++) {
+      if (nodeDist[i]! < a) continue;
+      if (nodeDist[i - 1]! > b) break;
+      gap = Math.max(gap, nodeDist[i]! - nodeDist[i - 1]!);
+    }
+    return gap;
+  };
 }
 
 function buildRuns(curvature: number[], minCurv: number, mergeGapSamples: number): Run[] {
@@ -102,6 +126,7 @@ function buildCurve(
   dist: number[],
   curvature: number[],
   cfg: CurveConfig,
+  maxGap: (fromDist: number, toDist: number) => number,
 ): Curve | null {
   const { from, to, sign } = run;
   const step = cfg.resampleStepM;
@@ -133,6 +158,8 @@ function buildCurve(
     direction,
     shape: shapeOf(curvature, from, to, sign, cfg),
     grade: gradeForRadius(minRadius, cfg),
+    // Bereich der Radiusmessung: Kurve plus die Spannweite des Umkreises an beiden Enden
+    confidence: geometryConfidence(maxGap(startDist - cfg.radiusSpanM, endDist + cfg.radiusSpanM), cfg),
     followsPrevious: false,
     gapToPrevious: null,
     startXY: path[from]!,

@@ -1,3 +1,5 @@
+import { DEFAULT_CURVE_CONFIG } from '../curves/config';
+import { gpsAccuracyFactor, withConfidenceFactor } from '../curves/confidence';
 import { buildMark, type FeedbackMark, type MarkKind } from '../feedback/model';
 import type { DriveSettings } from '../settings';
 import { gpsProfileForSpeed, sameProfile, type GpsProfile } from '../tracking/adaptiveGps';
@@ -91,7 +93,7 @@ export class DriveSession {
     } else if (st.status === 'onRoute') {
       if (this.lastStatus === 'offRoute') say(systemPhrase('backOnRoute', settings.voiceLanguage));
       this.scheduler.setSettings(announceSettingsFrom(settings));
-      const a = this.scheduler.next(st.dist, st.speed);
+      const a = this.scheduler.next(st.dist, st.speed, fix.accuracy);
       if (a) say(a.text);
     }
     this.lastStatus = st.status;
@@ -102,7 +104,13 @@ export class DriveSession {
       remaining: Math.max(0, this.tracker.length - st.dist),
       speed: st.speed,
       offset: st.offset,
-      upcoming: st.status === 'onRoute' ? nextCurves(this.o.route.curves, st.dist, this.o.upcomingCount ?? 5) : [],
+      upcoming:
+        st.status === 'onRoute'
+          ? nextCurves(this.o.route.curves, st.dist, this.o.upcomingCount ?? 5).map((u) => ({
+              ...u,
+              curve: withConfidenceFactor(u.curve, gpsAccuracyFactor(fix.accuracy, DEFAULT_CURVE_CONFIG)),
+            }))
+          : [],
     };
     this.listeners.forEach((l) => l(this.snapshot));
     void this.adaptGps(st.speed, now);

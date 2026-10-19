@@ -1,19 +1,23 @@
 import { StyleSheet, Text, View } from 'react-native';
 import type { Curve } from '../curves';
+import { DEFAULT_CURVE_CONFIG } from '../curves/config';
+import { isUncertain } from '../curves/confidence';
 import { useFormat } from '../i18n';
 import { colors } from '../theme';
 
 export function CurveRow({ curve }: { curve: Curve }) {
   const f = useFormat();
   const shape = f.shape(curve.shape);
+  const unsure = isUncertain(curve.confidence, DEFAULT_CURVE_CONFIG);
+  const gradeColor = unsure ? colors.muted : colors.grade[curve.grade - 1];
   return (
     <View style={[styles.row, curve.followsPrevious && styles.followUp]}>
-      <View style={[styles.grade, { borderColor: colors.grade[curve.grade - 1] }]}>
-        <Text style={[styles.gradeText, { color: colors.grade[curve.grade - 1] }]}>{curve.grade}</Text>
+      <View style={[styles.grade, { borderColor: gradeColor }, unsure && styles.gradeUncertain]}>
+        <Text style={[styles.gradeText, { color: gradeColor }]}>{unsure ? '?' : curve.grade}</Text>
       </View>
       <View style={styles.main}>
         <Text style={styles.title}>
-          {f.dir(curve.direction)} {curve.grade}
+          {f.dir(curve.direction)} {unsure ? f.t('curve.uncertain') : curve.grade}
           {shape ? <Text style={styles.muted}>  ·  {shape}</Text> : null}
         </Text>
         <Text style={styles.muted}>
@@ -43,6 +47,7 @@ const styles = StyleSheet.create({
   },
   followUp: { marginLeft: 16 },
   grade: { width: 44, height: 44, borderRadius: 22, borderWidth: 3, alignItems: 'center', justifyContent: 'center' },
+  gradeUncertain: { borderStyle: 'dashed' },
   gradeText: { fontSize: 22, fontWeight: '800' },
   main: { flex: 1 },
   title: { color: colors.text, fontSize: 18, fontWeight: '700' },

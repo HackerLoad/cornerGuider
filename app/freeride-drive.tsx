@@ -7,6 +7,8 @@ import { DriveLayout } from '../src/components/DriveLayout';
 import { FeedbackBar } from '../src/components/FeedbackBar';
 import { useFeedbackStore } from '../src/stores/feedbackStore';
 import { SimulatedLocationSource } from '../src/drive/simulator';
+import { DEFAULT_CURVE_CONFIG } from '../src/curves/config';
+import { isUncertain } from '../src/curves/confidence';
 import { FreerideSession, type FreerideSnapshot } from '../src/freeride/session';
 import { AppError, errorMessage } from '../src/errors';
 import { useFormat } from '../src/i18n';
@@ -33,8 +35,9 @@ function headline(s: FreerideSnapshot | null, f: Fmt): { text: string; tone: 'no
   if (s.status === 'noRoad') return { text: f.t('free.noRoad'), tone: 'bad' };
   if (s.status === 'uncertain') return { text: f.t('free.uncertain'), tone: 'warn' };
   const first = s.upcoming[0];
-  if (!first) return { text: f.t('free.noCurve'), tone: 'normal' };
-  const dir = `${f.dir(first.curve.direction)} ${first.curve.grade}`;
+  if (!first) return s.previewLost ? { text: f.t('free.noPreview'), tone: 'warn' } : { text: f.t('free.noCurve'), tone: 'normal' };
+  const unsure = isUncertain(first.curve.confidence, DEFAULT_CURVE_CONFIG);
+  const dir = `${f.dir(first.curve.direction)} ${unsure ? f.t('curve.uncertain') : first.curve.grade}`;
   return {
     text: first.inside ? `${f.t('drive.now')}: ${dir}` : `${f.t('drive.in', { distance: f.dist(Math.round(first.distanceTo / 10) * 10) })}: ${dir}`,
     tone: 'normal',
@@ -163,7 +166,9 @@ export default function FreerideDrive() {
         snap?.status === 'ok'
           ? rest.map((u) => (
               <View key={`${u.curve.startXY.x.toFixed(0)}_${u.curve.startXY.y.toFixed(0)}`} style={styles.item}>
-                <Text style={[styles.itemGrade, { color: colors.grade[u.curve.grade - 1] }]}>{u.curve.grade}</Text>
+                <Text style={[styles.itemGrade, { color: isUncertain(u.curve.confidence, DEFAULT_CURVE_CONFIG) ? colors.muted : colors.grade[u.curve.grade - 1] }]}>
+                  {isUncertain(u.curve.confidence, DEFAULT_CURVE_CONFIG) ? '?' : u.curve.grade}
+                </Text>
                 <Text style={styles.itemText}>{f.dir(u.curve.direction)}</Text>
                 <Text style={styles.itemDist}>{f.t('drive.in', { distance: f.dist(Math.round(u.distanceTo / 10) * 10) }).toLowerCase()}</Text>
               </View>

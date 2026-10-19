@@ -4,6 +4,7 @@ import type { XY } from '../geo/types';
 import { detectCurvesXY } from '../curves';
 import { dist } from '../geo/polyline';
 import { DEFAULT_CURVE_CONFIG } from '../curves/config';
+import { gpsAccuracyFactor, junctionFactor, withConfidenceFactor } from '../curves/confidence';
 import type { Curve } from '../curves';
 import { nextCurves, type UpcomingCurve } from '../tracking/nextCurves';
 import type { Fix } from '../tracking/routeTracker';
@@ -129,7 +130,11 @@ export class FreerideEngine {
       this.forgetFar(match.point);
       upcoming = nextCurves(complete, riderDist, this.cfg.upcomingCount).map((u) => {
         // Darstellung festhalten, Entfernungen aber aus dem aktuellen Pfad bestimmen
-        const curve = this.stabilize(u.curve);
+        // Konfidenz: unklare Kreuzung kurz hinter der Kurve und schlechtes GPS senken sie (nur an der Kopie)
+        const factor =
+          junctionFactor(det.length - u.curve.endDist, path.endReason, DEFAULT_CURVE_CONFIG) *
+          gpsAccuracyFactor(fix.accuracy, DEFAULT_CURVE_CONFIG);
+        const curve = withConfidenceFactor(this.stabilize(u.curve), factor);
         const s0 = snapToPolyline(curve.startXY, det.path, det.dist).dist;
         return { curve, distanceTo: Math.max(0, s0 - riderDist), inside: s0 <= riderDist, progressM: riderDist - s0 };
       });

@@ -1,5 +1,7 @@
 import Svg, { Circle, Line, Path, Text as SvgText } from 'react-native-svg';
 import type { Curve } from '../curves';
+import { DEFAULT_CURVE_CONFIG } from '../curves/config';
+import { isUncertain } from '../curves/confidence';
 import { colors } from '../theme';
 import { buildRoadGraphic } from './curveGraphicMath';
 
@@ -25,14 +27,16 @@ const LINE = '#00e5ff';
  */
 export function CurveGraphic({ curve, width, height, progressM, driveSide = 'right', showLine = true }: Props) {
   const g = buildRoadGraphic(curve, width, height, 36, progressM, 5, driveSide);
-  const color = colors.grade[curve.grade - 1];
+  const unsure = isUncertain(curve.confidence, DEFAULT_CURVE_CONFIG);
+  // Unsichere Kurve: gestrichelter, grauer Rand und „?" statt der Stufe
+  const color = unsure ? colors.muted : colors.grade[curve.grade - 1];
   const w = g.roadWidth;
   return (
     <Svg width={width} height={height}>
       {/* Fahrbahnrand */}
       <Path d={g.center} stroke={EDGE} strokeWidth={w + 4} strokeLinejoin="round" fill="none" />
       {/* Kurvenabschnitt: Rand in Stufenfarbe */}
-      <Path d={g.curve} stroke={color} strokeWidth={w + 4} strokeLinejoin="round" fill="none" />
+      <Path d={g.curve} stroke={color} strokeWidth={w + 4} strokeLinejoin="round" fill="none" strokeDasharray={unsure ? '14 10' : undefined} />
       {/* Asphalt */}
       <Path d={g.center} stroke={ASPHALT} strokeWidth={w - 5} strokeLinejoin="round" fill="none" />
       {/* Mittellinie, trennt Gegenspur und eigene Spur */}
@@ -48,7 +52,7 @@ export function CurveGraphic({ curve, width, height, progressM, driveSide = 'rig
         </>
       ) : null}
       <SvgText x={g.numberAnchor.x} y={g.numberAnchor.y} fill={color} fontSize={96} fontWeight="900" textAnchor="middle">
-        {curve.grade}
+        {unsure ? '?' : curve.grade}
       </SvgText>
     </Svg>
   );

@@ -1,4 +1,6 @@
 import type { Curve } from '../curves';
+import { DEFAULT_CURVE_CONFIG } from '../curves/config';
+import { gpsAccuracyFactor, withConfidenceFactor } from '../curves/confidence';
 import type { DriveSettings } from '../settings';
 import { DEFAULT_PHRASE_OPTIONS, announcementText, type PhraseOptions } from './phrases';
 
@@ -62,8 +64,12 @@ export class AnnounceScheduler {
     this.announced.clear();
   }
 
-  /** Gibt höchstens eine Ansage zurück (die nächste fällige Kurve). */
-  next(dist: number, speedMs: number): Announcement | null {
+  /**
+   * Gibt höchstens eine Ansage zurück (die nächste fällige Kurve).
+   * `gpsAccuracyM`: schlechte Ortung senkt die Konfidenz (die Position auf der Route ist dann unsicher).
+   */
+  next(dist: number, speedMs: number, gpsAccuracyM?: number | null): Announcement | null {
+    const accuracy = gpsAccuracyFactor(gpsAccuracyM, DEFAULT_CURVE_CONFIG);
     const lead = leadDistance(speedMs, this.settings);
     for (let i = 0; i < this.curves.length; i++) {
       const c = this.curves[i]!;
@@ -89,7 +95,8 @@ export class AnnounceScheduler {
       }
       this.announced.add(c.index);
       followUps.forEach((f) => this.announced.add(f.index));
-      return { curveIndex: c.index, text: announcementText(c, distanceTo, followUps, this.settings.phrase) };
+      const sure = (x: Curve) => withConfidenceFactor(x, accuracy);
+      return { curveIndex: c.index, text: announcementText(sure(c), distanceTo, followUps.map(sure), this.settings.phrase) };
     }
     return null;
   }

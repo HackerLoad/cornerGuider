@@ -18,6 +18,11 @@ export interface Curve {
   direction: Direction;
   shape: Shape;
   grade: Grade;
+  /**
+   * Verlässlichkeit der Stufe (0–1). Sinkt bei grober Geometrie (große Abstände der Original-Knoten),
+   * in der Freien Fahrt zusätzlich nahe unklaren Kreuzungen und bei schlechtem GPS.
+   */
+  confidence: number;
   /** Anfang und Ende der Kurve in den lokalen Metern der Eingabe (für Vergleiche und Wiedererkennung) */
   startXY: XY;
   endXY: XY;
