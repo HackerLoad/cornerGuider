@@ -11,10 +11,15 @@
       "ios": { "simulator": false }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "ios": { "image": "latest" }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "ios": { "image": "latest" },
+      "env": {
+        "ROAD_DATA_ALLOW_PUBLIC": "false"
+      }
     }
   },
   "submit": {
