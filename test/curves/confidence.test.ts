@@ -1,4 +1,5 @@
 import { detectCurvesXY } from '../../src/curves';
+import { tightenForConfidence } from '../../src/curves/classify';
 import { DEFAULT_CURVE_CONFIG } from '../../src/curves/config';
 import {
   geometryConfidence,
@@ -83,5 +84,45 @@ describe('weitere Konfidenz-Faktoren', () => {
   it('isUncertain vergleicht mit der Schwelle', () => {
     expect(isUncertain(cfg.uncertainBelow - 0.01, cfg)).toBe(true);
     expect(isUncertain(cfg.uncertainBelow, cfg)).toBe(false);
+  });
+});
+
+describe('Sicherheitsausrichtung (A2)', () => {
+  it('Sicherheitsfaktor stuft Grenzkurven enger ein', () => {
+    // R=16 m liegt knapp über der Stufe-1-Grenze (15 m); mit Faktor < 1 gilt es als Spitzkehre
+    const arc = new TrackBuilder().straight(60).arc('left', 16, 180).straight(60).xy();
+    const strict = detectCurvesXY(arc, ORIGIN, { safetyMarginRadiusFactor: 0.85 }).curves[0]!;
+    const neutral = detectCurvesXY(arc, ORIGIN, { safetyMarginRadiusFactor: 1 }).curves[0]!;
+    expect(strict.grade).toBeLessThanOrEqual(neutral.grade);
+    expect(DEFAULT_CURVE_CONFIG.safetyMarginRadiusFactor).toBeLessThan(1);
+  });
+
+  it('tightenForConfidence: hohe Konfidenz unverändert, niedrige eine Stufe enger, nie unter 1', () => {
+    expect(tightenForConfidence(4, 1, cfg)).toBe(4);
+    expect(tightenForConfidence(4, cfg.reducedBelow, cfg)).toBe(4);
+    expect(tightenForConfidence(4, cfg.reducedBelow - 0.01, cfg)).toBe(3);
+    expect(tightenForConfidence(1, 0.1, cfg)).toBe(1);
+  });
+
+  it('grobe Geometrie: Stufe ist eine enger als die gemessene', () => {
+    const track = new TrackBuilder().straight(200).arc('right', 80, 120).straight(200).xy();
+    const fine = detectCurvesXY(thin(track, 5), ORIGIN).curves[0]!;
+    expect(fine.grade).toBe(fine.measuredGrade);
+    const coarse = detectCurvesXY(thin(track, 45), ORIGIN).curves;
+    expect(coarse.length).toBeGreaterThan(0);
+    for (const c of coarse) {
+      expect(c.confidence).toBeLessThan(cfg.reducedBelow);
+      expect(c.grade).toBe(Math.max(1, c.measuredGrade - 1));
+    }
+  });
+
+  it('withConfidenceFactor rechnet die Stufe immer aus der gemessenen neu (kein doppeltes Verschärfen)', () => {
+    const c = detectCurvesXY(new TrackBuilder().straight(100).arc('left', 60, 90).straight(100).xy(), ORIGIN).curves[0]!;
+    expect(c.confidence).toBeGreaterThan(0.9);
+    const low = withConfidenceFactor(c, 0.5);
+    expect(low.grade).toBe(Math.max(1, c.measuredGrade - 1));
+    const lower = withConfidenceFactor(low, 0.5);
+    expect(lower.grade).toBe(Math.max(1, c.measuredGrade - 1));
+    expect(withConfidenceFactor(low, 1).grade).toBe(low.grade);
   });
 });

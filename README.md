@@ -46,6 +46,7 @@ Stand der Review-Runde 2026-10 (siehe `docs/review-2026-10.md`). Wird nach jeder
 - Kurvengrafik-Layout, Dateiimport, Tabs/Einstellungen und Live-Aktivität auf einem Gerät: ungesehen.
 - Freie Fahrt mit echtem Fahrzeug-GPS: nur eine kurze Autofahrt.
 - Store-Builds über EAS: nicht ausgelöst.
+- Sicherheitsabschlag (A2): 0,85 ist ein Schätzwert aus drei probierten Werten (0,9 / 0,85 / 0,8 / 0,75), nicht kalibriert. Ob die strengeren Stufen zu echten Kurven auf dem Motorrad passen, ist ungeprüft.
 - Konfidenz (A1): Schwellwerte in `src/curves/config.ts` sind geschätzt. Die gestrichelte Darstellung unsicherer Kurven und die Ansagen „Kurve, unsicher" / „Keine Vorschau" wurden nicht auf einem Gerät gesehen oder gehört. Die Live-Aktivität zeigt für unsichere Kurven weiterhin die Stufe (bewusst nicht angefasst, siehe Feature-Stopp).
 
 ### Messwerte Kurvenerkennung (CLI, `test/fixtures/*.gpx`)
@@ -54,6 +55,16 @@ Stand der Review-Runde 2026-10 (siehe `docs/review-2026-10.md`). Wird nach jeder
 | --- | --- | --- |
 | Vor der Review-Runde (19.10.2026) | 235 / 71·20·60·57·24·3 | 358 / 34·155·108·51·9·1 |
 | Nach A1 (Stufen unverändert) | 235, davon 26 unsicher (Konfidenz < 0,4) | 358, davon 11 unsicher |
+| Nach A2 (Abschlag 0,85, bei Konfidenz < 0,7 eine Stufe enger) | 235 / 76·35·62·44·17·1 | 358 / 60·153·102·39·3·1 |
+
+Freie Fahrt, Simulation entlang der Fixtures (`test/curves/regression.test.ts` hält die Werte fest):
+
+| Stand | Stelvio: Ansagen richtig | Stelvio: Kurven bis Stufe 4 erkannt | Amalfi: Ansagen richtig | Amalfi: Kurven bis Stufe 4 erkannt |
+| --- | --- | --- | --- | --- |
+| Vor der Review-Runde (Abschlag 0,9) | 85 % (33/39) | 71 % (24/34) | 99 % (76/77) | 97 % (70/72) |
+| Nach A2 (Abschlag 0,85) | 85 % (33/39) | 70 % (26/37) | 99 % (76/77) | 97 % (72/74) |
+
+Einordnung: Der Abschlag ändert nur die Einstufung, nicht die Erkennung. Auf Stelvio bleibt die Erkennungsquote praktisch gleich (70 statt 71 %): Es fehlen weiter 11 von 37 Kurven bis Stufe 4, A2 hat daran nichts verbessert. Die Nenner verschieben sich, weil durch die strengere Einstufung mehr Kurven in „bis Stufe 4" fallen (Stelvio 34 → 37, Amalfi 72 → 74). Die Zahl der Spitzkehren (Stufe 1) steigt dadurch auf Amalfi von 34 auf 60 und auf Stelvio von 71 auf 76; das ist gewollt (lieber zu streng), aber nicht an echten Fahrten geprüft.
 
 ## Stack
 

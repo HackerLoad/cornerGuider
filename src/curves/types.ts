@@ -17,7 +17,10 @@ export interface Curve {
   totalAngle: number;
   direction: Direction;
   shape: Shape;
+  /** Angesagte/angezeigte Stufe: `measuredGrade`, bei niedriger Konfidenz um eins enger */
   grade: Grade;
+  /** Stufe allein aus dem Radius (mit Sicherheitsabschlag), ohne Abzug für unsichere Geometrie */
+  measuredGrade: Grade;
   /**
    * Verlässlichkeit der Stufe (0–1). Sinkt bei grober Geometrie (große Abstände der Original-Knoten),
    * in der Freien Fahrt zusätzlich nahe unklaren Kreuzungen und bei schlechtem GPS.

@@ -22,8 +22,11 @@ export interface CurveConfig {
   shapeFraction: number;
   /** Relative Krümmungsänderung ab der eine Kurve zugeht/aufgeht */
   shapeRatio: number;
-  /** Sicherheitsfaktor auf den Radius vor der Einstufung (<1 = enger einstufen) */
-  radiusSafetyFactor: number;
+  /**
+   * Sicherheitsabschlag: der gemessene Radius wird vor der Einstufung damit multipliziert (<1 = Grenzkurven
+   * eher eine Stufe enger). Solange nichts kalibriert ist, lieber zu streng als zu mild.
+   */
+  safetyMarginRadiusFactor: number;
   /** Obergrenzen des Mindestradius (m) für Stufe 1..5; darüber Stufe 6 */
   gradeMaxRadiusM: [number, number, number, number, number];
 
@@ -34,6 +37,8 @@ export interface CurveConfig {
   poorNodeSpacingM: number;
   /** Unter dieser Konfidenz wird keine Stufe angesagt, sondern „Kurve, unsicher" */
   uncertainBelow: number;
+  /** Unter dieser Konfidenz wird eine (noch angesagte) Stufe zusätzlich um eins enger eingestuft */
+  reducedBelow: number;
   /** GPS-Genauigkeit (m), bis zu der die Position als gut gilt */
   gpsGoodAccuracyM: number;
   /** GPS-Genauigkeit (m), ab der der Faktor `gpsMinFactor` gilt */
@@ -58,7 +63,8 @@ export const DEFAULT_CURVE_CONFIG: CurveConfig = {
   geometryMarginM: 50,
   shapeFraction: 0.33,
   shapeRatio: 1.25,
-  radiusSafetyFactor: 0.9,
+  // 0,85 statt zuvor 0,9: gemessen auf Stelvio/Amalfi (siehe README), Schätzwert, nicht an echten Fahrten kalibriert
+  safetyMarginRadiusFactor: 0.85,
   // Stufe 1 = Spitzkehre … 6 = sehr leicht
   gradeMaxRadiusM: [15, 30, 50, 80, 130],
   // Konfidenz: Schätzwerte. Die Kreisnäherung über 15 m Spannweite (radiusSpanM) trägt nur, wenn die
@@ -66,6 +72,7 @@ export const DEFAULT_CURVE_CONFIG: CurveConfig = {
   goodNodeSpacingM: 20,
   poorNodeSpacingM: 80,
   uncertainBelow: 0.4,
+  reducedBelow: 0.7,
   gpsGoodAccuracyM: 15,
   gpsPoorAccuracyM: 50,
   gpsMinFactor: 0.3,

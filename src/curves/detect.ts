@@ -1,7 +1,7 @@
 import { cumulativeLengths, dedupe, resample, smooth } from '../geo/polyline';
 import { projectionForPoints } from '../geo/projection';
 import type { LatLon, XY } from '../geo/types';
-import { gradeForRadius } from './classify';
+import { gradeForRadius, tightenForConfidence } from './classify';
 import { markSequences } from './combine';
 import { DEFAULT_CURVE_CONFIG, type CurveConfig } from './config';
 import { geometryConfidence } from './confidence';
@@ -148,6 +148,10 @@ function buildCurve(
   const minRadius = 1 / maxCurv;
   const direction: Direction = sign > 0 ? 'left' : 'right';
 
+  const measuredGrade = gradeForRadius(minRadius, cfg);
+  // Bereich der Radiusmessung: Kurve plus die Spannweite des Umkreises an beiden Enden
+  const confidence = geometryConfidence(maxGap(startDist - cfg.radiusSpanM, endDist + cfg.radiusSpanM), cfg);
+
   return {
     index: 0,
     startDist,
@@ -157,9 +161,9 @@ function buildCurve(
     totalAngle,
     direction,
     shape: shapeOf(curvature, from, to, sign, cfg),
-    grade: gradeForRadius(minRadius, cfg),
-    // Bereich der Radiusmessung: Kurve plus die Spannweite des Umkreises an beiden Enden
-    confidence: geometryConfidence(maxGap(startDist - cfg.radiusSpanM, endDist + cfg.radiusSpanM), cfg),
+    grade: tightenForConfidence(measuredGrade, confidence, cfg),
+    measuredGrade,
+    confidence,
     followsPrevious: false,
     gapToPrevious: null,
     startXY: path[from]!,
