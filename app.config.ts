@@ -85,6 +85,8 @@ const config: ExpoConfig = {
       'ACCESS_BACKGROUND_LOCATION',
       'FOREGROUND_SERVICE',
       'FOREGROUND_SERVICE_LOCATION',
+      // Android 13+: Laufzeitrecht für die Benachrichtigung des Vordergrunddienstes (src/services/notificationPermission.ts)
+      'POST_NOTIFICATIONS',
     ],
   },
   plugins: [

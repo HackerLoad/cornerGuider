@@ -89,5 +89,5 @@ Geprüft wurde, ob das Ziel `LiveActivity` allein aus dem Repo entsteht, wie es 
 - Android wurde noch nie gebaut oder auf einem Gerät gestartet (Ducking der Musik, Hintergrund-Ortung ungeprüft)
 - Splash-Screen und Android-Icons sind konfiguriert, aber noch nicht auf einem Gerät gesehen
 - Feedback wird nur per Export weitergegeben (kein Server); die Auswertung ist Handarbeit
-- Android-Benachrichtigungsrecht (`POST_NOTIFICATIONS`, Android 13+) für die Dienst-Benachrichtigung wird noch nicht angefragt (Aufgabe A8 der Review-Runde)
+- Android-Benachrichtigungsrecht (`POST_NOTIFICATIONS`, Android 13+): wird vor dem Fahrmodus angefragt, mit Hinweis bei Ablehnung; auf einem Gerät **nicht geprüft** (Dialog, Verhalten des Vordergrunddienstes ohne das Recht)
 - Entscheidung, ob die Freie Fahrt in der ersten Version dabei ist (im Produktionsprofil sind die öffentlichen Overpass-Server gesperrt; ohne eigenes Backend funktioniert die Freie Fahrt im Release nicht, siehe oben)

@@ -15,6 +15,7 @@ import { useFormat } from '../../src/i18n';
 import type { StoredRoute } from '../../src/routes/model';
 import { configureAudioSession } from '../../src/services/audioSession';
 import { DeviceLocationSource } from '../../src/services/deviceLocation';
+import { ensureNotifications } from '../../src/services/notificationPermission';
 import { loadRoute } from '../../src/services/routeStorage';
 import { liveInputFromDrive } from '../../src/liveActivity/mappers';
 import { endLiveActivity, updateLiveActivity } from '../../src/services/liveActivity';
@@ -63,6 +64,7 @@ export default function DriveScreen() {
       if (!r) return;
       try {
         await configureAudioSession();
+        if (!isSim) await ensureNotifications(); // Android 13+: Recht für die Dienst-Benachrichtigung der Hintergrund-Ortung
         let source: DeviceLocationSource | SimulatedLocationSource;
         if (isSim) {
           const simSource = new SimulatedLocationSource(r, { speedKmh: 60 });

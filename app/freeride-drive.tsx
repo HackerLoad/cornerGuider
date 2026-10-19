@@ -15,6 +15,7 @@ import { useFormat } from '../src/i18n';
 import { configureAudioSession } from '../src/services/audioSession';
 import { DeviceLocationSource } from '../src/services/deviceLocation';
 import { saveRecording } from '../src/services/freerideStorage';
+import { ensureNotifications } from '../src/services/notificationPermission';
 import { createLeanSource } from '../src/services/leanSensor';
 import { createTileLoader } from '../src/services/roadData';
 import { loadRoute } from '../src/services/routeStorage';
@@ -83,6 +84,7 @@ export default function FreerideDrive() {
     (async () => {
       try {
         await configureAudioSession();
+        if (!simRouteId) await ensureNotifications(); // Android 13+: Recht für die Dienst-Benachrichtigung der Hintergrund-Ortung
         let source: DeviceLocationSource | SimulatedLocationSource;
         if (simRouteId) {
           const route = await loadRoute(simRouteId);

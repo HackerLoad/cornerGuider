@@ -5,6 +5,7 @@
 export const de = {
   'common.back': 'Zurück',
   'common.cancel': 'Abbrechen',
+  'common.ok': 'OK',
   'common.delete': 'Löschen',
 
   'tabs.go': 'Go',
@@ -235,6 +236,9 @@ export const de = {
 
   // Benachrichtigung des Hintergrunddienstes (Android) während der Fahrt
   'notif.body': 'Kurvenführung aktiv',
+  'notifPerm.title': 'Benachrichtigungen sind aus',
+  'notifPerm.text': 'Ohne Benachrichtigungen kann die Ortung im Hintergrund unzuverlässig sein: Die Ansagen können bei gesperrtem Display aussetzen oder abbrechen. Du kannst das in den Systemeinstellungen ändern. Die Fahrt startet trotzdem.',
+  'notifPerm.settings': 'Einstellungen öffnen',
 
   // Rückmeldungen
   'fb.wrong': 'Falsch',
@@ -292,6 +296,7 @@ export type TextKey = keyof typeof de;
 export const en: Record<TextKey, string> = {
   'common.back': 'Back',
   'common.cancel': 'Cancel',
+  'common.ok': 'OK',
   'common.delete': 'Delete',
 
   'tabs.go': 'Go',
@@ -508,6 +513,9 @@ export const en: Record<TextKey, string> = {
   'err.readFile': 'The file could not be read: {reason}',
 
   'notif.body': 'Curve guidance active',
+  'notifPerm.title': 'Notifications are off',
+  'notifPerm.text': 'Without notifications, location tracking in the background can be unreliable: announcements may stop or cut out while the screen is locked. You can change this in the system settings. The ride starts anyway.',
+  'notifPerm.settings': 'Open settings',
 
   'fb.wrong': 'Wrong',
   'fb.missing': 'Missing',
