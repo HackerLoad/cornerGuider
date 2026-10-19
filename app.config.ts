@@ -8,6 +8,16 @@ const config: ExpoConfig = {
   orientation: 'default',
   icon: './assets/icon.png',
   userInterfaceStyle: 'dark',
+  extra: {
+    // Straßendaten der Freien Fahrt (siehe docs/road-data-backend.md). Im Release ROAD_DATA_URL setzen und
+    // ROAD_DATA_ALLOW_PUBLIC=false, damit die App nicht auf die öffentlichen Overpass-Server ausweicht.
+    roadData: {
+      url: process.env.ROAD_DATA_URL ?? '',
+      allowPublic: process.env.ROAD_DATA_ALLOW_PUBLIC !== 'false',
+      contact: process.env.ROAD_DATA_CONTACT ?? 'https://github.com/HackerLoad/cornerGuider',
+      maxRequestsPerMinute: Number(process.env.ROAD_DATA_MAX_PER_MINUTE ?? 30),
+    },
+  },
   ios: {
     bundleIdentifier: 'com.hackerload.cornerguider',
     buildNumber: '1',

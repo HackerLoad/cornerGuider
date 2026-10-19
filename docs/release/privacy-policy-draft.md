@@ -20,7 +20,7 @@ cornerGuider hat kein Benutzerkonto, keine Werbung und kein Tracking. Streckenda
 
 ## Freie Fahrt: Abruf von Straßendaten
 
-Für die Freie Fahrt lädt die App Straßendaten von **OpenStreetMap** über öffentliche Overpass-Server (derzeit `overpass.openstreetmap.fr`, ersatzweise `overpass-api.de` und `maps.mail.ru`). Dabei wird **der ungefähre Standort** (Mittelpunkt eines Kreises von 1,5 km Radius um deine Position, auf 6 Nachkommastellen) an diesen Server gesendet. Der Server erhält technisch bedingt deine IP-Adresse. Es werden keine Namen, Gerätekennungen oder Konten übertragen. Die Betreiber der Server verarbeiten die Anfragen nach eigenen Datenschutzhinweisen.
+Für die Freie Fahrt lädt die App Straßendaten von **OpenStreetMap** über öffentliche Overpass-Server (derzeit `overpass.openstreetmap.fr`, ersatzweise `overpass-api.de` und `maps.mail.ru`). **Entwurfshinweis:** Für den Release ist ein eigener Server bzw. vorberechnete Kacheln vorgesehen (siehe `docs/road-data-backend.md`); dieser Absatz muss dann auf den tatsächlich genutzten Dienst angepasst werden. Die App sendet einen eindeutigen User-Agent (`cornerGuider/<Version>`) und begrenzt die Anfragen pro Minute. Dabei wird **der ungefähre Standort** (Mittelpunkt eines Kreises von 1,5 km Radius um deine Position, auf 6 Nachkommastellen) an diesen Server gesendet. Der Server erhält technisch bedingt deine IP-Adresse. Es werden keine Namen, Gerätekennungen oder Konten übertragen. Die Betreiber der Server verarbeiten die Anfragen nach eigenen Datenschutzhinweisen.
 
 Die Freie Fahrt wird nur gestartet, wenn du sie selbst auswählst. Bei Fahrten mit geplanter Strecke werden keine Positionsdaten übertragen.
 

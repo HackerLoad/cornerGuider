@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useFormat } from '../i18n';
+import { OSM_COPYRIGHT_URL } from '../osm';
 import { applyOrientation } from '../services/orientation';
 import { shareTextFile } from '../services/exporter';
 import { cacheInfo, clearTileCache, formatBytes } from '../services/roadData';
@@ -216,6 +217,14 @@ export function SettingsView() {
             }
           />
         ) : null}
+      </Section>
+
+      <Section title={f.t('about.sec')}>
+        <ButtonRow
+          label={f.t('about.osm')}
+          note={f.t('about.osmNote')}
+          onPress={() => void Linking.openURL(OSM_COPYRIGHT_URL).catch(() => undefined)}
+        />
       </Section>
 
       <Section title={f.t('set.sec.other')}>

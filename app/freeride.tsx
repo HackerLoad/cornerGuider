@@ -1,8 +1,9 @@
 import { Link, router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFormat } from '../src/i18n';
+import { OSM_COPYRIGHT_URL } from '../src/osm';
 import { listRecordings, type RecordingInfo } from '../src/services/freerideStorage';
 import { useRoutesStore } from '../src/stores/routesStore';
 import { colors } from '../src/theme';
@@ -53,7 +54,9 @@ export default function FreerideStart() {
         ))}
       </View>
 
-      <Text style={styles.attribution}>{f.t('free.attribution')}</Text>
+      <Text style={styles.attribution} onPress={() => void Linking.openURL(OSM_COPYRIGHT_URL).catch(() => undefined)}>
+        {f.t('free.attribution')}
+      </Text>
     </ScrollView>
   );
 }

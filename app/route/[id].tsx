@@ -5,7 +5,8 @@ import { CurveRow } from '../../src/components/CurveRow';
 import { prefetchTiles, type PrefetchProgress } from '../../src/freeride/tileLoader';
 import { tilesAlong } from '../../src/freeride/tiles';
 import { makeProjection } from '../../src/geo/projection';
-import { createTileLoader } from '../../src/services/roadData';
+import { errorMessage } from '../../src/errors';
+import { assertRoadDataConfigured, createTileLoader } from '../../src/services/roadData';
 import { useFormat } from '../../src/i18n';
 import { warningText } from '../../src/routes/warningText';
 import type { StoredRoute } from '../../src/routes/model';
@@ -58,6 +59,12 @@ export default function RouteOverview() {
 
   const startDownload = async () => {
     stopRef.current = false;
+    try {
+      assertRoadDataConfigured(); // im Release ohne eigenen Server: klare Meldung statt lauter Fehlversuche
+    } catch (e) {
+      Alert.alert(errorMessage(e, f.lang));
+      return;
+    }
     setDownloading(true);
     setProgress({ done: 0, total: tiles.length, failed: 0 });
     try {

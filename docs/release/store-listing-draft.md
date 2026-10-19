@@ -20,7 +20,9 @@ cornerGuider zeigt und sagt dir während der Fahrt die nächste Kurve an – ohn
 • Leichte Kurven nur, wenn sie direkt auf eine angesagte folgen – einstellbar
 • Hochformat und Querformat, dunkle Anzeige mit großem Kontrast, Live-Aktivität auf dem Sperrbildschirm
 • Funktioniert ohne Konto und ohne Netz, deine Daten bleiben auf dem Gerät
-• Freie Fahrt (Versuch): Kurven auch ohne geplante Route, aus OpenStreetMap-Daten vorhergesagt
+• Freie Fahrt (Versuch): Kurven auch ohne geplante Route, aus OpenStreetMap-Daten vorhergesagt (Straßendaten © OpenStreetMap-Mitwirkende, Lizenz ODbL)
+
+**Quellenangabe:** Straßendaten der Freien Fahrt © OpenStreetMap-Mitwirkende (ODbL), https://www.openstreetmap.org/copyright. Dieser Hinweis gehört in die Beschreibung beider Stores (nicht nur in die App).
 
 **Wichtig:** Die Kurvendaten können ungenau sein. cornerGuider gibt keine Geschwindigkeitsempfehlung. Der tatsächliche Straßenverlauf hat immer Vorrang. Bedienung nur im Stand.
 

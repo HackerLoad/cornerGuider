@@ -70,7 +70,7 @@ Expo SDK 54 / React Native 0.81, TypeScript (strict), expo-router, Zustand, expo
 ## Material und Rechtliches
 
 - Logo: `assets/icon.png` (1024×1024). Screenshots aus dem iOS-Simulator liegen lokal unter `ios/Simulator Screenshot …png` (der Ordner steht nicht im Git); neue Screenshots am besten von Amalfi oder Stelvio: Fahrmodus Hoch- und Querformat, Routenübersicht, Kurvengrafik, Auswertung der Freien Fahrt.
-- Straßendaten der Freien Fahrt: © OpenStreetMap-Mitwirkende (ODbL). **Die Quellenangabe muss überall stehen, wo diese Funktion gezeigt wird.**
+- Straßendaten der Freien Fahrt: © OpenStreetMap-Mitwirkende (ODbL), Link auf https://www.openstreetmap.org/copyright. **Die Quellenangabe muss überall stehen, wo diese Funktion gezeigt wird** – auf der Website (Seite der Freien Fahrt und Fußzeile), in den Store-Texten und in der App (Einstellungen › Über, Freie Fahrt).
 - Test-GPX (`test/fixtures`) stammen aus `gpx-rider/gpx-rider.github.io` (MIT-Lizenz); bei Verwendung auf der Website die Quelle nennen.
 - Das Repo ist privat. Quellcode oder interne Dateien nicht ohne Rückfrage veröffentlichen.
 

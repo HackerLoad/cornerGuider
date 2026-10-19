@@ -1,5 +1,12 @@
+import Constants from 'expo-constants';
 import { Directory, File, Paths } from 'expo-file-system';
-import { OVERPASS_ENDPOINTS } from '../freeride/overpassClient';
+import {
+  DEFAULT_MAX_REQUESTS_PER_MINUTE,
+  resolveEndpoints,
+  userAgentFor,
+  type RoadDataBuildConfig,
+} from '../freeride/roadDataConfig';
+import { OverpassSource, type RoadDataSource } from '../freeride/roadDataSource';
 import { TileLoader, type TileCache } from '../freeride/tileLoader';
 import type { OsmWay } from '../freeride/types';
 import { useSettingsStore } from '../stores/settingsStore';
@@ -31,13 +38,38 @@ export const tileCache: TileCache = {
   },
 };
 
-/** Lader mit Speicher; ein eigener Overpass-Server aus den Einstellungen wird zuerst angefragt. */
-export function createTileLoader(): TileLoader {
-  const custom = useSettingsStore.getState().overpassUrl.trim();
-  return new TileLoader({
-    cache: tileCache,
-    fetchOptions: { endpoints: custom ? [custom, ...OVERPASS_ENDPOINTS] : OVERPASS_ENDPOINTS },
+/** Konfiguration aus dem Build (`extra.roadData` in app.config.ts). */
+function buildConfig(): RoadDataBuildConfig | undefined {
+  return (Constants.expoConfig?.extra as { roadData?: RoadDataBuildConfig } | undefined)?.roadData;
+}
+
+function createOverpassSource(): OverpassSource {
+  const build = buildConfig();
+  return new OverpassSource({
+    endpoints: resolveEndpoints(build, useSettingsStore.getState().overpassUrl),
+    userAgent: userAgentFor(Constants.expoConfig?.version, build?.contact),
+    maxRequestsPerMinute: build?.maxRequestsPerMinute ?? DEFAULT_MAX_REQUESTS_PER_MINUTE,
   });
+}
+
+/** Wirft `err.noRoadServer`, wenn der Build keine öffentlichen Server erlaubt und kein eigener eingerichtet ist. */
+export function assertRoadDataConfigured(): void {
+  resolveEndpoints(buildConfig(), useSettingsStore.getState().overpassUrl);
+}
+
+/**
+ * Straßendaten für die Freie Fahrt und das Vorladen: Speicher auf dem Gerät, dahinter Overpass.
+ * Server: eigener aus den Einstellungen, dann der aus dem Build, dann (nur wenn der Build es erlaubt) die
+ * öffentlichen. Die Server werden erst beim ersten Netzabruf bestimmt, damit Seiten, die nur den Speicher
+ * abfragen, auch ohne eingerichteten Server funktionieren; dann wirft der Abruf `err.noRoadServer`.
+ */
+export function createTileLoader(): TileLoader {
+  let source: OverpassSource | null = null;
+  const lazy: RoadDataSource = {
+    name: 'overpass',
+    loadTile: (tile) => (source ??= createOverpassSource()).loadTile(tile),
+  };
+  return new TileLoader({ cache: tileCache, source: lazy });
 }
 
 export interface CacheInfo {

@@ -1,6 +1,6 @@
 import type { OsmWay } from './types';
-import { buildTileQuery, tileKey, type Tile } from './tiles';
-import { fetchOverpass, type FetchOptions } from './overpassClient';
+import { tileKey, type Tile } from './tiles';
+import type { RoadDataSource } from './roadDataSource';
 
 /** Speicher für Straßendaten je Kachel (auf dem Gerät: Dateien). */
 export interface TileCache {
@@ -11,9 +11,10 @@ export interface TileCache {
 
 export interface TileLoaderOptions {
   cache?: TileCache;
-  /** Netzabruf einer Kachel; Standard: Overpass mit Serverwechsel */
+  /** Quelle bei Speicher-Fehlschlag (Overpass, später ein eigenes Backend) */
+  source?: RoadDataSource;
+  /** Alternativ: Netzabruf als Funktion (für Tests) */
   fetchTile?: (tile: Tile) => Promise<OsmWay[]>;
-  fetchOptions?: FetchOptions;
   now?: () => number;
   /** Daten jünger als dies gelten als frisch (Standard 30 Tage) */
   freshMs?: number;
@@ -27,7 +28,7 @@ export type TileSource = 'cache' | 'network' | 'stale-cache';
  * Lädt Straßendaten je Kachel: erst aus dem Speicher (wenn frisch), sonst aus dem Netz.
  * Schlägt das Netz fehl, werden ältere gespeicherte Daten verwendet (Offline-Betrieb).
  */
-export class TileLoader {
+export class TileLoader implements RoadDataSource {
   private readonly cache?: TileCache;
   private readonly fetchTile: (tile: Tile) => Promise<OsmWay[]>;
   private readonly now: () => number;
@@ -37,10 +38,17 @@ export class TileLoader {
     this.cache = o.cache;
     this.now = o.now ?? Date.now;
     this.freshMs = o.freshMs ?? 30 * DAY_MS;
-    this.fetchTile =
-      o.fetchTile ??
-      // Leere Kacheln (Wald, Wasser) sind erlaubt, werden aber vom Client erst nach Bestätigung durch einen zweiten Server akzeptiert
-      ((tile) => fetchOverpass(buildTileQuery(tile), { ...o.fetchOptions, allowEmpty: true }));
+    const source = o.source;
+    if (!o.fetchTile && !source) throw new Error('TileLoader braucht eine Quelle (source) oder fetchTile');
+    this.fetchTile = o.fetchTile ?? ((tile) => source!.loadTile(tile));
+    this.name = `cache+${source?.name ?? 'fetch'}`;
+  }
+
+  readonly name: string;
+
+  /** Als RoadDataSource: Speicher zuerst, sonst die Quelle dahinter (und veraltete Daten bei Netzfehlern). */
+  async loadTile(tile: Tile): Promise<OsmWay[]> {
+    return (await this.load(tile)).ways;
   }
 
   async load(tile: Tile): Promise<{ ways: OsmWay[]; source: TileSource }> {

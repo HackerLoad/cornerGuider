@@ -57,6 +57,8 @@ export interface FetchOptions {
    * Versuch (anderer Server) bestätigt werden, weil öffentliche Server kurz leere Antworten liefern können.
    */
   allowEmpty?: boolean;
+  /** Wird vor jeder HTTP-Anfrage (auch Wiederholungen) abgewartet, z. B. zur Begrenzung pro Minute */
+  beforeRequest?: () => Promise<void>;
 }
 
 /** Fehler eines einzelnen Versuchs (Grund wird für die Meldung nach allen Versuchen gemerkt). */
@@ -89,6 +91,7 @@ export async function fetchOverpass(query: string, opts: FetchOptions = {}): Pro
 
   for (let i = 0; i < attempts; i++) {
     const url = endpoints[i % endpoints.length]!;
+    await opts.beforeRequest?.();
     const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
     const timer = ctrl ? setTimeout(() => ctrl.abort(), opts.timeoutMs ?? 12_000) : null;
     try {

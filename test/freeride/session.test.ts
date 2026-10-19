@@ -8,6 +8,7 @@ import { FreerideSession } from '../../src/freeride/session';
 import { parseGpx } from '../../src/gpx/parseGpx';
 import { makeProjection } from '../../src/geo/projection';
 import { calibrate, formatCalibration } from '../../src/freeride/calibration';
+import { MockRoadDataSource } from './mockRoadDataSource';
 import { parseRecording } from '../../src/freeride/recordingFormat';
 import { DEFAULT_DRIVE_SETTINGS } from '../../src/settings';
 
@@ -17,7 +18,7 @@ const route = { path: det.path, projectionOrigin: det.projectionOrigin };
 const ways = parseOverpass(JSON.parse(fx('osm-amalfi.json')));
 const flush = () => new Promise<void>((r) => setImmediate(r));
 
-function setup(loadTile: (t: unknown) => Promise<typeof ways>, speedKmh = 54) {
+function setup(loadTile: (t: never) => Promise<typeof ways>, speedKmh = 54) {
   const clock = { t: 1_000_000 };
   const sim = new SimulatedLocationSource(route, { speedKmh, startDist: 60, now: () => clock.t });
   const spoken: string[] = [];
@@ -25,7 +26,7 @@ function setup(loadTile: (t: unknown) => Promise<typeof ways>, speedKmh = 54) {
     source: sim,
     speak: (t) => spoken.push(t),
     getSettings: () => DEFAULT_DRIVE_SETTINGS,
-    loadTile: loadTile as never,
+    roadData: new MockRoadDataSource(loadTile as never),
     now: () => clock.t,
     retryMs: 10_000,
   });
@@ -125,7 +126,7 @@ describe('Ortung im Stand', () => {
       source: sim,
       speak: () => undefined,
       getSettings: () => DEFAULT_DRIVE_SETTINGS,
-      loadTile: (async () => ways) as never,
+      roadData: new MockRoadDataSource(ways),
       now: () => clock.t,
     });
     const step = async () => {
@@ -157,7 +158,7 @@ describe('Aufzeichnung für die Kalibrierung', () => {
       source: sim,
       speak: () => undefined,
       getSettings: () => DEFAULT_DRIVE_SETTINGS,
-      loadTile: (async () => ways) as never,
+      roadData: new MockRoadDataSource(ways),
       now: () => clock.t,
       lean,
     });

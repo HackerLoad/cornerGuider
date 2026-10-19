@@ -20,10 +20,9 @@ import {
   type RecordedFix,
 } from './recordingFormat';
 import { PreviewMonitor } from './previewMonitor';
-import { fetchOverpass } from './overpassClient';
-import { buildTileQuery, tileKey, tilesNear, type Tile } from './tiles';
+import type { RoadDataSource } from './roadDataSource';
+import { tileKey, tilesNear, type Tile } from './tiles';
 import { RoadGraph } from './roadGraph';
-import type { OsmWay } from './types';
 
 export type { FreerideRecording, FreerideStats, RecordedAnnouncement, RecordedFix } from './recordingFormat';
 
@@ -48,8 +47,8 @@ export interface FreerideSessionOptions {
   getSettings: () => DriveSettings;
   /** Bewegungssensor für die Schräglage (Kalibrierdaten); ohne ihn bleiben die Sensorwerte leer */
   lean?: LeanSource;
-  /** Straßendaten einer Kachel holen (Speicher und Netz); Standard: direkt von Overpass */
-  loadTile?: (tile: Tile) => Promise<OsmWay[]>;
+  /** Woher die Straßendaten kommen (Speicher und Netz, Overpass, später ein eigenes Backend) */
+  roadData: RoadDataSource;
   now?: () => number;
   /** So weit voraus werden Kacheln schon geladen (m); eine zweite Marke liegt beim Doppelten */
   lookAheadM?: number;
@@ -285,8 +284,8 @@ export class FreerideSession {
       const key = tileKey(tile);
       this.tileState.set(key, 'loading');
       this.active++;
-      const load = this.o.loadTile ?? ((t: Tile) => fetchOverpass(buildTileQuery(t), { allowEmpty: true }));
-      load(tile)
+      this.o.roadData
+        .loadTile(tile)
         .then((ways) => {
           graph.addWays(ways);
           this.tileState.set(key, 'loaded');

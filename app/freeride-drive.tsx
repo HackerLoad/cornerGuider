@@ -96,7 +96,7 @@ export default function FreerideDrive() {
         const loader = createTileLoader();
         // Schräglage (Kalibrierdaten) nur auf einer echten Fahrt; in der Simulation liegt das Handy still
         const lean = simRouteId ? undefined : createLeanSource();
-        s = new FreerideSession({ source, speak: (t) => speakWithSettings(t), getSettings: currentDriveSettings, loadTile: (tile) => loader.load(tile).then((r) => r.ways), lean });
+        s = new FreerideSession({ source, speak: (t) => speakWithSettings(t), getSettings: currentDriveSettings, roadData: loader, lean });
         if (cancelled) return;
         setSession(s);
         unsub = s.subscribe(setSnap);
