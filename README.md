@@ -36,6 +36,23 @@ Bekannte offene Punkte:
 - **Kurvengrafik:** Das Layout (v. a. die Position der Stufenzahl) ist noch nicht auf einem Gerät gesehen.
 - **Dateiimport:** Dateiauswahl, „Öffnen mit"/Teilen und iOS-Dokumenttyp sind noch nicht auf einem Gerät geprüft.
 
+## Nicht geprüft
+
+Stand der Review-Runde 2026-10 (siehe `docs/review-2026-10.md`). Wird nach jeder Aufgabe aktualisiert. Nur Unit-Tests, Typecheck und CLI-Läufe auf GPX/OSM-Fixtures sind gelaufen.
+
+- Fahrt auf einem Motorrad: nie. Die Kurvenstufen sind nicht kalibriert.
+- Android: wurde nie gebaut. Audio-Fokus/Ducking ist ungeprüft.
+- Zusammenspiel mit einer parallel laufenden Navi-App: ungeprüft.
+- Kurvengrafik-Layout, Dateiimport, Tabs/Einstellungen und Live-Aktivität auf einem Gerät: ungesehen.
+- Freie Fahrt mit echtem Fahrzeug-GPS: nur eine kurze Autofahrt.
+- Store-Builds über EAS: nicht ausgelöst.
+
+### Messwerte Kurvenerkennung (CLI, `test/fixtures/*.gpx`)
+
+| Stand | Stelvio (Kurven / Stufen 1–6) | Amalfi (Kurven / Stufen 1–6) |
+| --- | --- | --- |
+| Vor der Review-Runde (19.10.2026) | 235 / 71·20·60·57·24·3 | 358 / 34·155·108·51·9·1 |
+
 ## Stack
 
 Expo SDK 54 / React Native 0.81 (Development Build, kein Expo Go; iOS-Build braucht Xcode ≥ 16.1) · React Native · TypeScript (strict) · expo-router · Zustand · expo-location + expo-task-manager · expo-speech + expo-audio · react-native-svg · expo-file-system · Jest
