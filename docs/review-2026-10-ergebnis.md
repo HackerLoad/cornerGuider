@@ -66,7 +66,7 @@ Quelle: `npm run curves` und die Freie-Fahrt-Simulation mit echten OSM-Daten (`t
 2. **Stelvio-Erkennung (71 %):** Soll als Nächstes untersucht werden, warum Kurven fehlen (Nebenstraßen im Track, Kreuzungsabbrüche, OSM-Geometrie)? Das ist die eigentliche Ursache von B2, A2 ändert nur die Strenge.
 3. **Stufen-Strenge:** Reicht 0,85, oder soll es nach den Beifahrer-Testfahrten angepasst werden? Spitzkehren auf Amalfi stiegen von 34 auf 60; stimmt das mit dem Gefühl auf der Straße?
 4. **Live-Aktivität:** Sie zeigt für unsichere Kurven weiter die Stufe (Feature-Stopp: nicht angefasst). Soll das in der nächsten Runde angepasst werden?
-5. **Löschen von Aufzeichnungen:** Es gibt keine Funktion dafür (`deleteRecording` ist nirgends eingebunden). Für die Datenschutzerklärung wäre sie vor einem Release nötig.
+5. **Löschen von Aufzeichnungen:** erledigt (Löschen-Knopf mit Rückfrage in der Liste der Freien Fahrt); auf dem Gerät nicht geprüft.
 6. **`image: latest`:** Beim ersten Cloud-Build im Log nachsehen, ob wirklich Xcode 26 benutzt wird. Wenn nicht, ein festes Image eintragen.
 7. **Kalibrierung ab Frühjahr 2027:** Der Export der Aufzeichnung läuft über die Ergebnisansicht (JSON); unter Android wird er als Text geteilt (bei langen Fahrten ungeprüft). Reicht das, oder soll ein Dateiexport her?
 8. **Alte Projektkopie / Ordner im iCloud-Desktop:** Aufgabe aus Abschnitt 3 des Auftrags, bei dir. Wichtig dabei: `ios/` enthält die lokalen Simulator-Screenshots (liegen nicht im Git) und wird bei `prebuild --clean` gelöscht; vorher sichern. Die Prüfung der Live-Aktivität lief deshalb in einem Scratch-Verzeichnis, nicht im Projekt.

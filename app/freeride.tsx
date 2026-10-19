@@ -1,10 +1,10 @@
 import { Link, router } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useFormat } from '../src/i18n';
 import { OSM_COPYRIGHT_URL } from '../src/osm';
-import { listRecordings, type RecordingInfo } from '../src/services/freerideStorage';
+import { deleteRecording, listRecordings, type RecordingInfo } from '../src/services/freerideStorage';
 import { useRoutesStore } from '../src/stores/routesStore';
 import { colors } from '../src/theme';
 
@@ -14,6 +14,19 @@ export default function FreerideStart() {
   const routes = useRoutesStore((s) => s.routes);
   const [recordings, setRecordings] = useState<RecordingInfo[]>([]);
   useFocusEffect(useCallback(() => setRecordings(listRecordings()), []));
+
+  const confirmDelete = (r: RecordingInfo) =>
+    Alert.alert(f.t('free.deleteRecordingTitle'), f.t('free.deleteRecordingText'), [
+      { text: f.t('common.cancel'), style: 'cancel' },
+      {
+        text: f.t('common.delete'),
+        style: 'destructive',
+        onPress: () => {
+          deleteRecording(r.id);
+          setRecordings(listRecordings());
+        },
+      },
+    ]);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 16, gap: 12 }}>
@@ -45,12 +58,17 @@ export default function FreerideStart() {
         <Text style={styles.section}>{f.t('free.recordings')}</Text>
         {recordings.length === 0 ? <Text style={styles.muted}>{f.t('free.noRecordings')}</Text> : null}
         {recordings.map((r) => (
-          <Link key={r.id} href={{ pathname: '/freeride-result/[id]', params: { id: r.id } }} asChild>
-            <Pressable style={styles.card}>
-              <Text style={styles.cardTitle}>{new Date(r.startedAt).toLocaleString(f.lang === 'de' ? 'de-DE' : 'en-GB')}</Text>
-              <Text style={styles.muted}>{f.t('free.viewResult')}</Text>
+          <View key={r.id} style={styles.recRow}>
+            <Link href={{ pathname: '/freeride-result/[id]', params: { id: r.id } }} asChild>
+              <Pressable style={[styles.card, { flex: 1 }]}>
+                <Text style={styles.cardTitle}>{new Date(r.startedAt).toLocaleString(f.lang === 'de' ? 'de-DE' : 'en-GB')}</Text>
+                <Text style={styles.muted}>{f.t('free.viewResult')}</Text>
+              </Pressable>
+            </Link>
+            <Pressable style={styles.deleteBtn} onPress={() => confirmDelete(r)} accessibilityRole="button">
+              <Text style={styles.deleteText}>{f.t('common.delete')}</Text>
             </Pressable>
-          </Link>
+          </View>
         ))}
       </View>
 
@@ -71,5 +89,8 @@ const styles = StyleSheet.create({
   card: { backgroundColor: colors.card, borderRadius: 12, padding: 14, gap: 2 },
   cardTitle: { color: colors.text, fontSize: 16, fontWeight: '700' },
   muted: { color: colors.muted, fontSize: 13 },
+  recRow: { flexDirection: 'row', gap: 8, alignItems: 'stretch' },
+  deleteBtn: { backgroundColor: colors.card, borderRadius: 12, paddingHorizontal: 14, justifyContent: 'center' },
+  deleteText: { color: '#ff5a5a', fontSize: 14, fontWeight: '700' },
   attribution: { color: colors.muted, fontSize: 12, marginTop: 12 },
 });

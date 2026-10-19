@@ -31,7 +31,7 @@ Die Freie Fahrt wird nur gestartet, wenn du sie selbst auswählst. Bei Fahrten m
 - Bei der Freien Fahrt speichert die App für jede Fahrt eine Aufzeichnung: Positionen mit Zeitstempel, GPS-Geschwindigkeit und -Genauigkeit, den berechneten Kurvenradius, die rechnerische Schräglage und, falls das Gerät einen Bewegungssensor hat, die Richtung der Schwerkraft und die daraus berechnete Neigung. Dazu die angesagten Kurven und deine Bewertungen.
 - Die Aufzeichnung bleibt auf deinem Gerät. Die App sendet sie nicht an uns oder Dritte und wertet sie nicht selbst aus.
 - Ein Export (GPX oder JSON) findet **nur statt, wenn du ihn selbst in der Ergebnisansicht der Fahrt auslöst**. Wohin du die Datei teilst, entscheidest du. Die Aufzeichnung enthält deine gefahrene Strecke mit Uhrzeiten und lässt Rückschlüsse auf Wohnort und Gewohnheiten zu; teile sie nur mit Personen, denen du vertraust.
-- **Offen:** Die App hat derzeit keine Funktion, einzelne Aufzeichnungen zu löschen (`deleteRecording` existiert im Code, ist aber in keiner Ansicht eingebunden). Aktuell sind alle Aufzeichnungen erst mit dem Löschen der App entfernt. Vor einem Release entweder eine Löschfunktion ergänzen oder diesen Text so lassen.
+- Einzelne Aufzeichnungen lassen sich in der Liste der Freien Fahrt löschen (Knopf mit Rückfrage; auf dem Gerät nicht geprüft). Mit dem Löschen der App werden ohnehin alle Daten entfernt.
 - Der Bewegungssensor wird nur während einer Freien Fahrt gelesen.
 
 ## Berechtigungen
@@ -43,7 +43,7 @@ Die Freie Fahrt wird nur gestartet, wenn du sie selbst auswählst. Bei Fahrten m
 
 ## Speicherdauer und Löschen
 
-Alle Daten liegen lokal. Strecken kannst du in der App löschen. Einzelne Aufzeichnungen der Freien Fahrt lassen sich derzeit nicht in der App löschen (siehe Abschnitt „Aufzeichnung und Export"); mit dem Löschen der App werden alle Daten entfernt.
+Alle Daten liegen lokal. Strecken und einzelne Aufzeichnungen der Freien Fahrt kannst du in der App löschen; mit dem Löschen der App werden alle Daten entfernt.
 
 ## Deine Rechte
 
