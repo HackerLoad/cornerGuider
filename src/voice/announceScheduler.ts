@@ -32,7 +32,7 @@ export function announceSettingsFrom(s: DriveSettings): AnnounceSettings {
     minLeadM: s.minLeadM,
     minUsefulM: 30,
     minAnnounceGrade: s.minAnnounceGrade,
-    phrase: { language: s.voiceLanguage, style: s.announceStyle, shape: s.announceShape, units: s.units },
+    phrase: { language: s.voiceLanguage, style: s.shortAnnouncements ? 'short' : s.announceStyle, shape: s.announceShape, units: s.units },
   };
 }
 

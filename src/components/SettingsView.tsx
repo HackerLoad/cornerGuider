@@ -41,6 +41,7 @@ export function SettingsView() {
           onMinus={() => s.set({ minAnnounceGrade: clamp(s.minAnnounceGrade - 1, 1, 6) })}
           onPlus={() => s.set({ minAnnounceGrade: clamp(s.minAnnounceGrade + 1, 1, 6) })}
         />
+        <ToggleRow label={f.t('set.short')} note={f.t('set.shortNote')} value={s.shortAnnouncements} onChange={(v) => s.set({ shortAnnouncements: v })} />
         <ChoiceRow
           label={f.t('set.style')}
           value={s.announceStyle}
@@ -48,7 +49,7 @@ export function SettingsView() {
           note={f.t(s.announceStyle === 'long' ? 'set.style.longNote' : 'set.style.shortNote')}
           onChange={(v) => s.set({ announceStyle: v })}
         />
-        {s.announceStyle === 'long' ? (
+        {s.announceStyle === 'long' && !s.shortAnnouncements ? (
           <ToggleRow label={f.t('set.shape')} note={f.t('set.shapeNote')} value={s.announceShape} onChange={(v) => s.set({ announceShape: v })} />
         ) : null}
         <StepperRow
@@ -99,7 +100,7 @@ export function SettingsView() {
           onPress={() => {
             const cur = currentDriveSettings();
             speakWithSettings(
-              exampleAnnouncement({ language: cur.voiceLanguage, style: cur.announceStyle, shape: cur.announceShape, units: cur.units }),
+              exampleAnnouncement({ language: cur.voiceLanguage, style: cur.shortAnnouncements ? 'short' : cur.announceStyle, shape: cur.announceShape, units: cur.units }),
               cur,
             );
           }}

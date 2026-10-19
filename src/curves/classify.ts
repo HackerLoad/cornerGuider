@@ -19,7 +19,7 @@ export function tightenForConfidence(grade: Grade, confidence: number, cfg: Curv
  * Zieht die Kurve deutlich zu (und ist nicht sehr leicht)? Solche Kurven umgehen den Ansagefilter, weil das
  * Zuziehen für Motorradfahrer die wichtigste Warnung ist. `grade` ist bereits die Stufe des engsten Punkts.
  */
-export function isStrongTightening(curve: Pick<Curve, 'shape' | 'curvatureChange' | 'grade'>, cfg: CurveConfig): boolean {
+export function isStrongTightening(curve: Pick<Curve, 'shape' | 'curvatureChange'> & { grade: number }, cfg: CurveConfig): boolean {
   return (
     curve.shape === 'tightening' &&
     curve.curvatureChange >= cfg.strongTighteningRatio &&

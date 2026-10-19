@@ -3,6 +3,7 @@ import { dist } from '../geo/polyline';
 import type { LatLon, XY } from '../geo/types';
 import type { DriveSettings } from '../settings';
 import { buildMark, type FeedbackMark, type MarkKind } from '../feedback/model';
+import { GpsAdapter } from '../tracking/adaptiveGps';
 import { DrivenRadius } from '../tracking/drivenRadius';
 import { LeanTracker, calcLeanDeg, type LeanSource } from '../tracking/leanAngle';
 import type { Fix } from '../tracking/routeTracker';
@@ -94,6 +95,7 @@ export class FreerideSession {
   private startedAt = 0;
   private readonly fixes: RecordedFix[] = [];
   private readonly announcements: RecordedAnnouncement[] = [];
+  private readonly gps = new GpsAdapter();
   private readonly leanTracker = new LeanTracker();
   private readonly drivenRadius = new DrivenRadius();
   private leanSensor = false;
@@ -186,6 +188,10 @@ export class FreerideSession {
       this.lastSpoken = text;
       if (settings.voiceEnabled) this.o.speak(text);
     }
+
+    // Im Stand sparsamer orten (wie bei der geplanten Route); in Fahrt bleibt es bei 1 Hz
+    const profile = this.gps.update(fix.speed, t);
+    if (profile && this.o.source.setProfile) void this.o.source.setProfile(profile).catch(() => undefined);
 
     const data: DataStatus = this.dataStatus(fix);
     this.stats.steps++;

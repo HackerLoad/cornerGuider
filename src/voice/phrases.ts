@@ -1,3 +1,4 @@
+import { isStrongTightening } from '../curves/classify';
 import { DEFAULT_CURVE_CONFIG } from '../curves/config';
 import { isUncertain } from '../curves/confidence';
 import type { Units, VoiceLanguage, AnnounceStyle } from '../settings';
@@ -8,6 +9,8 @@ export interface CurveInfo {
   shape: 'tightening' | 'opening' | 'constant';
   /** Verlässlichkeit der Stufe (0–1); fehlt der Wert, gilt die Stufe als sicher */
   confidence?: number;
+  /** Krümmung am Ende ÷ am Anfang; damit erkennt der kurze Stil deutlich zuziehende Kurven */
+  curvatureChange?: number;
 }
 
 export interface PhraseOptions {
@@ -32,6 +35,10 @@ const WORDS = {
     then: 'then', in: 'In', uncertain: 'Curve, uncertain', meters: 'meters', feet: 'feet', miles: 'miles',
   },
 } as const;
+
+function isStrong(c: CurveInfo): boolean {
+  return c.curvatureChange !== undefined && isStrongTightening({ shape: c.shape, curvatureChange: c.curvatureChange, grade: c.grade }, DEFAULT_CURVE_CONFIG);
+}
 
 /** Einzelne Kurve: „Rechts 3, zieht zu", „Spitzkehre links" bzw. englisch „Right 3, tightening", „Hairpin left". */
 export function curvePhrase(c: CurveInfo, withShape = true, language: VoiceLanguage = 'de'): string {
@@ -73,7 +80,7 @@ export function announcementText(
   const long = opts.style === 'long';
   const head = long
     ? `${distancePhrase(distanceTo, opts.units, opts.language)} ${curvePhrase(curve, opts.shape, opts.language)}`
-    : curvePhrase(curve, false, opts.language);
+    : curvePhrase(curve, isStrong(curve), opts.language); // kurz: „zieht zu" nur bei deutlich zuziehenden Kurven
   if (followUps.length === 0) return head;
   const tail = followUps.map((c) => curvePhrase(c, false, opts.language).toLowerCase());
   return `${head}, ${w.then} ${tail.join(`, ${w.then} `)}`;

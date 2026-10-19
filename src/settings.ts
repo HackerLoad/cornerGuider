@@ -21,6 +21,11 @@ export interface DriveSettings {
   minAnnounceGrade: number;
   /** long: „In 240 Metern Rechts 3, zieht zu"; short: „Rechts 3" */
   announceStyle: AnnounceStyle;
+  /**
+   * Kurze Ansagen: nur Richtung und Stufe, kein Vorlauftext („In 240 Metern"). Überstimmt `announceStyle`,
+   * ohne ihn zu verändern. Nur deutlich zuziehende Kurven behalten „zieht zu".
+   */
+  shortAnnouncements: boolean;
   /** „zieht zu" / „öffnet" mitsprechen (nur im langen Stil) */
   announceShape: boolean;
   voiceLanguage: VoiceLanguage;
@@ -58,6 +63,7 @@ export const DEFAULT_DRIVE_SETTINGS: DriveSettings = {
   speechRate: 1,
   minAnnounceGrade: 4,
   announceStyle: 'long',
+  shortAnnouncements: false,
   announceShape: true,
   voiceLanguage: 'de',
   voiceId: null,

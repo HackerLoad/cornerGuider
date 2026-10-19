@@ -2,7 +2,7 @@ import { DEFAULT_CURVE_CONFIG } from '../curves/config';
 import { gpsAccuracyFactor, withConfidenceFactor } from '../curves/confidence';
 import { buildMark, type FeedbackMark, type MarkKind } from '../feedback/model';
 import type { DriveSettings } from '../settings';
-import { gpsProfileForSpeed, sameProfile, type GpsProfile } from '../tracking/adaptiveGps';
+import { GpsAdapter } from '../tracking/adaptiveGps';
 import { nextCurves, type UpcomingCurve } from '../tracking/nextCurves';
 import { RouteTracker, type Fix, type TrackStatus, type TrackerRoute } from '../tracking/routeTracker';
 import { AnnounceScheduler, announceSettingsFrom } from '../voice/announceScheduler';
@@ -28,16 +28,13 @@ export interface DriveSessionOptions {
   upcomingCount?: number;
 }
 
-const STANDING_BEFORE_ECO_MS = 20_000;
-
 /** Verbindet Positionsquelle, Tracker, Ansagen und UI-Snapshot (ohne RN-Abhängigkeit). */
 export class DriveSession {
   private readonly tracker: RouteTracker;
   private readonly scheduler: AnnounceScheduler;
   private readonly now: () => number;
   private listeners = new Set<(s: DriveSnapshot) => void>();
-  private profile: GpsProfile | null = null;
-  private standingSince: number | null = null;
+  private readonly gps = new GpsAdapter();
   private lastStatus: TrackStatus = 'acquiring';
   private running = false;
   private lastFix: Fix | null = null;
@@ -118,12 +115,7 @@ export class DriveSession {
 
   private async adaptGps(speed: number, now: number): Promise<void> {
     if (!this.o.source.setProfile) return;
-    if (speed >= 1) this.standingSince = null;
-    else this.standingSince ??= now;
-    const standingLongEnough = this.standingSince !== null && now - this.standingSince >= STANDING_BEFORE_ECO_MS;
-    const wanted = gpsProfileForSpeed(standingLongEnough ? 0 : Math.max(speed, 1));
-    if (this.profile && sameProfile(this.profile, wanted)) return;
-    this.profile = wanted;
-    await this.o.source.setProfile(wanted).catch(() => undefined);
+    const next = this.gps.update(speed, now);
+    if (next) await this.o.source.setProfile(next).catch(() => undefined);
   }
 }

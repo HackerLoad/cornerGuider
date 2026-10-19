@@ -1,6 +1,6 @@
 import { detectCurves } from '../../src/curves';
-import { AnnounceScheduler, leadDistance, DEFAULT_ANNOUNCE_SETTINGS } from '../../src/voice/announceScheduler';
-import { announcementText, spokenDistance, systemPhrase } from '../../src/voice/phrases';
+import { AnnounceScheduler, announceSettingsFrom, leadDistance, DEFAULT_ANNOUNCE_SETTINGS } from '../../src/voice/announceScheduler';
+import { DEFAULT_PHRASE_OPTIONS, announcementText, spokenDistance, systemPhrase } from '../../src/voice/phrases';
 import { TrackBuilder } from '../curves/helpers';
 
 const t = new TrackBuilder()
@@ -31,6 +31,40 @@ describe('Phrasen', () => {
     const txt = announcementText(curves[0]!, 150, [curves[1]!]);
     expect(txt).toMatch(/^In 150 Metern Rechts \d/);
     expect(txt).toContain('danach links');
+  });
+});
+
+describe('Kurze Ansagen (Schalter)', () => {
+  const base = { ...DEFAULT_PHRASE_OPTIONS, language: 'de', style: 'long', shape: true, units: 'metric' } as const;
+  const strong = { direction: 'right', grade: 3, shape: 'tightening', curvatureChange: 3 } as const;
+  const mild = { direction: 'right', grade: 3, shape: 'tightening', curvatureChange: 1.5 } as const;
+
+  it('announceSettingsFrom: der Schalter erzwingt den kurzen Stil, ohne den gewählten Stil zu verändern', () => {
+    const on = announceSettingsFrom({ ...DEFAULT_DRIVE_SETTINGS, announceStyle: 'long', shortAnnouncements: true });
+    expect(on.phrase.style).toBe('short');
+    const off = announceSettingsFrom({ ...DEFAULT_DRIVE_SETTINGS, announceStyle: 'long', shortAnnouncements: false });
+    expect(off.phrase.style).toBe('long');
+    expect(DEFAULT_DRIVE_SETTINGS.shortAnnouncements).toBe(false);
+  });
+
+  it('kein Vorlauftext: nur Richtung und Stufe', () => {
+    expect(announcementText({ direction: 'left', grade: 4, shape: 'constant' }, 237, [], { ...base, style: 'short' })).toBe('Links 4');
+  });
+
+  it('deutlich zuziehend behält „zieht zu“ auch kurz, leicht zuziehend nicht', () => {
+    expect(announcementText(strong, 237, [], { ...base, style: 'short' })).toBe('Rechts 3, zieht zu');
+    expect(announcementText(mild, 237, [], { ...base, style: 'short' })).toBe('Rechts 3');
+    expect(announcementText(strong, 237, [], { ...base, style: 'short', language: 'en' })).toBe('Right 3, tightening');
+  });
+
+  it('Folgekurven bleiben kurz', () => {
+    expect(announcementText(strong, 237, [{ direction: 'left', grade: 4, shape: 'tightening', curvatureChange: 3 }], { ...base, style: 'short' })).toBe(
+      'Rechts 3, zieht zu, danach links 4',
+    );
+  });
+
+  it('unsichere Kurve bleibt „Kurve, unsicher“', () => {
+    expect(announcementText({ ...strong, confidence: 0.1 }, 237, [], { ...base, style: 'short' })).toBe('Kurve, unsicher');
   });
 });
 
@@ -90,7 +124,6 @@ describe('AnnounceScheduler', () => {
   });
 });
 
-import { announceSettingsFrom } from '../../src/voice/announceScheduler';
 import { DEFAULT_DRIVE_SETTINGS } from '../../src/settings';
 import { distancePhrase, exampleAnnouncement, curvePhrase } from '../../src/voice/phrases';
 import { formatDistance, formatKm, formatRadius, formatSpeed } from '../../src/format';

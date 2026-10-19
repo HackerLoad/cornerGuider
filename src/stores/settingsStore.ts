@@ -55,6 +55,7 @@ export function currentDriveSettings(): DriveSettings {
     speechRate: s.speechRate,
     minAnnounceGrade: s.minAnnounceGrade,
     announceStyle: s.announceStyle,
+    shortAnnouncements: s.shortAnnouncements,
     announceShape: s.announceShape,
     voiceLanguage: s.voiceLanguage,
     voiceId: s.voiceId,

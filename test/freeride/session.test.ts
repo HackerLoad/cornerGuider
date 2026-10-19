@@ -113,6 +113,38 @@ describe('FreerideSession', () => {
   });
 });
 
+describe('Ortung im Stand', () => {
+  it('stellt auf sparsames Orten um, wenn die Fahrt 20 s steht, und danach zurück', async () => {
+    const profiles: string[] = [];
+    const clock = { t: 1_000_000 };
+    const sim = new SimulatedLocationSource(route, { speedKmh: 54, startDist: 60, now: () => clock.t });
+    (sim as unknown as { setProfile: (p: { accuracy: string }) => Promise<void> }).setProfile = async (p) => {
+      profiles.push(p.accuracy);
+    };
+    const session = new FreerideSession({
+      source: sim,
+      speak: () => undefined,
+      getSettings: () => DEFAULT_DRIVE_SETTINGS,
+      loadTile: (async () => ways) as never,
+      now: () => clock.t,
+    });
+    const step = async () => {
+      clock.t += 1000;
+      sim.tick(1000);
+      await flush();
+    };
+    await session.start();
+    await flush();
+    for (let i = 0; i < 5; i++) await step();
+    sim.setPaused(true);
+    for (let i = 0; i < 30; i++) await step();
+    sim.setPaused(false);
+    for (let i = 0; i < 5; i++) await step();
+    await sim.stop();
+    expect(profiles).toEqual(['best', 'balanced', 'best']);
+  });
+});
+
 describe('Aufzeichnung für die Kalibrierung', () => {
   it('speichert Genauigkeit, gefahrenen Radius, rechnerische und gemessene Schräglage', async () => {
     // Sensor-Attrappe: aufrecht im Stand, danach 20° geneigt
