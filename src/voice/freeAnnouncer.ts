@@ -1,3 +1,5 @@
+import { isStrongTightening } from '../curves/classify';
+import { DEFAULT_CURVE_CONFIG } from '../curves/config';
 import { dist } from '../geo/polyline';
 import type { XY } from '../geo/types';
 import type { UpcomingCurve } from '../tracking/nextCurves';
@@ -42,7 +44,7 @@ export class FreeAnnouncer {
       const u = upcoming[i]!;
       if (this.seen(u.curve.startXY)) continue;
       if (u.distanceTo > lead) return null;
-      if (u.curve.grade > this.settings.minAnnounceGrade && !u.inside) {
+      if (u.curve.grade > this.settings.minAnnounceGrade && !u.inside && !isStrongTightening(u.curve, DEFAULT_CURVE_CONFIG)) {
         this.announced.push(u.curve.startXY); // leichte Kurve: nur in der Ansage der vorigen Kurve
         continue;
       }

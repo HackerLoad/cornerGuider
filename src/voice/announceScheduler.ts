@@ -1,4 +1,5 @@
 import type { Curve } from '../curves';
+import { isStrongTightening } from '../curves/classify';
 import { DEFAULT_CURVE_CONFIG } from '../curves/config';
 import { gpsAccuracyFactor, withConfidenceFactor } from '../curves/confidence';
 import type { DriveSettings } from '../settings';
@@ -77,7 +78,7 @@ export class AnnounceScheduler {
       if (this.announced.has(c.index)) continue;
       const distanceTo = c.startDist - dist;
       if (distanceTo > lead) return null; // spätere Kurven sind noch weiter weg
-      if (c.grade > this.settings.minAnnounceGrade) {
+      if (c.grade > this.settings.minAnnounceGrade && !isStrongTightening(c, DEFAULT_CURVE_CONFIG)) {
         // leichte Kurve: nicht für sich ansagen (folgt sie auf eine angesagte Kurve, steht sie in deren Ansage)
         this.announced.add(c.index);
         continue;

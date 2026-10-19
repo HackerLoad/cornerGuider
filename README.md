@@ -46,6 +46,7 @@ Stand der Review-Runde 2026-10 (siehe `docs/review-2026-10.md`). Wird nach jeder
 - Kurvengrafik-Layout, Dateiimport, Tabs/Einstellungen und Live-Aktivität auf einem Gerät: ungesehen.
 - Freie Fahrt mit echtem Fahrzeug-GPS: nur eine kurze Autofahrt.
 - Store-Builds über EAS: nicht ausgelöst.
+- „Zieht zu" / „öffnet" (A3): Schwellwerte (`shapeRatio`, `shapePeakFraction`, `strongTighteningRatio`) sind geschätzt. Stichprobe von 5 Stelvio-Kurven nur per Rechnung am GPX-Track geprüft, nicht gefahren. Die Markierung in der Kurvengrafik wurde auf keinem Gerät gesehen.
 - Sicherheitsabschlag (A2): 0,85 ist ein Schätzwert aus drei probierten Werten (0,9 / 0,85 / 0,8 / 0,75), nicht kalibriert. Ob die strengeren Stufen zu echten Kurven auf dem Motorrad passen, ist ungeprüft.
 - Konfidenz (A1): Schwellwerte in `src/curves/config.ts` sind geschätzt. Die gestrichelte Darstellung unsicherer Kurven und die Ansagen „Kurve, unsicher" / „Keine Vorschau" wurden nicht auf einem Gerät gesehen oder gehört. Die Live-Aktivität zeigt für unsichere Kurven weiterhin die Stufe (bewusst nicht angefasst, siehe Feature-Stopp).
 
@@ -56,6 +57,8 @@ Stand der Review-Runde 2026-10 (siehe `docs/review-2026-10.md`). Wird nach jeder
 | Vor der Review-Runde (19.10.2026) | 235 / 71·20·60·57·24·3 | 358 / 34·155·108·51·9·1 |
 | Nach A1 (Stufen unverändert) | 235, davon 26 unsicher (Konfidenz < 0,4) | 358, davon 11 unsicher |
 | Nach A2 (Abschlag 0,85, bei Konfidenz < 0,7 eine Stufe enger) | 235 / 76·35·62·44·17·1 | 358 / 60·153·102·39·3·1 |
+
+Form der Kurven (A3, CLI): „zieht zu" Stelvio 61 von 235 (davon deutlich zuziehend 35), Amalfi 104 von 358 (65). Bei dem Standardfilter „ab Stufe 4" umgeht dadurch nur 1 Kurve (Stelvio) bzw. keine (Amalfi) den Filter; erst bei strengeren Filtern spielt die Regel eine Rolle. Vor der Korrektur galten auch Kurven mit dem engsten Punkt in der Mitte als „zieht zu" (Stelvio 94, Amalfi 149).
 
 Freie Fahrt, Simulation entlang der Fixtures (`test/curves/regression.test.ts` hält die Werte fest):
 

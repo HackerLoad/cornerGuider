@@ -160,7 +160,7 @@ function buildCurve(
     minRadius,
     totalAngle,
     direction,
-    shape: shapeOf(curvature, from, to, sign, cfg),
+    ...shapeOf(curvature, from, to, sign, cfg),
     grade: tightenForConfidence(measuredGrade, confidence, cfg),
     measuredGrade,
     confidence,
@@ -172,7 +172,13 @@ function buildCurve(
   };
 }
 
-function shapeOf(curvature: number[], from: number, to: number, sign: number, cfg: CurveConfig): Shape {
+function shapeOf(
+  curvature: number[],
+  from: number,
+  to: number,
+  sign: number,
+  cfg: CurveConfig,
+): { shape: Shape; curvatureChange: number } {
   const n = to - from + 1;
   const m = Math.max(1, Math.floor(n * cfg.shapeFraction));
   const mean = (a: number, b: number) => {
@@ -182,9 +188,27 @@ function shapeOf(curvature: number[], from: number, to: number, sign: number, cf
   };
   const head = mean(from, from + m - 1);
   const tail = mean(to - m + 1, to);
-  if (tail > head * cfg.shapeRatio) return 'tightening';
-  if (head > tail * cfg.shapeRatio) return 'opening';
-  return 'constant';
+  const curvatureChange = Math.min(10, Math.max(0.1, head > 0 ? tail / head : 10));
+
+  // Lage und Höhe des engsten Punkts (größte Krümmung): Anfang vs. engster Punkt vs. Ende
+  let peak = 0;
+  let peakAt = from;
+  for (let i = from; i <= to; i++) {
+    const kc = curvature[i]! * sign;
+    if (kc > peak) {
+      peak = kc;
+      peakAt = i;
+    }
+  }
+  const peakPos = n > 1 ? (peakAt - from) / (n - 1) : 0.5; // 0 = Anfang, 1 = Ende
+  // „Zieht zu": das Ende ist deutlich enger als der Anfang und der engste Punkt liegt hinten (bei „öffnet" umgekehrt)
+  if (tail > head * cfg.shapeRatio && peakPos >= cfg.shapePeakFraction) {
+    return { shape: 'tightening', curvatureChange };
+  }
+  if (head > tail * cfg.shapeRatio && peakPos <= 1 - cfg.shapePeakFraction) {
+    return { shape: 'opening', curvatureChange };
+  }
+  return { shape: 'constant', curvatureChange };
 }
 
 /** Geometrie ±Rand, Ursprung = Kurvenanfang, Einfahrtsrichtung = +y. */

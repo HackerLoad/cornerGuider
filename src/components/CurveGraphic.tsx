@@ -2,6 +2,7 @@ import Svg, { Circle, Line, Path, Text as SvgText } from 'react-native-svg';
 import type { Curve } from '../curves';
 import { DEFAULT_CURVE_CONFIG } from '../curves/config';
 import { isUncertain } from '../curves/confidence';
+import { useFormat } from '../i18n';
 import { colors } from '../theme';
 import { buildRoadGraphic } from './curveGraphicMath';
 
@@ -26,6 +27,7 @@ const LINE = '#00e5ff';
  * Mittellinie, Kurvenabschnitt am Rand in der Farbe der Stufe, dazu die Fahrlinie in der eigenen Spur.
  */
 export function CurveGraphic({ curve, width, height, progressM, driveSide = 'right', showLine = true }: Props) {
+  const f = useFormat();
   const g = buildRoadGraphic(curve, width, height, 36, progressM, 5, driveSide);
   const unsure = isUncertain(curve.confidence, DEFAULT_CURVE_CONFIG);
   // Unsichere Kurve: gestrichelter, grauer Rand und „?" statt der Stufe
@@ -49,6 +51,15 @@ export function CurveGraphic({ curve, width, height, progressM, driveSide = 'rig
         <Path d={g.line} stroke="#000" strokeWidth={g.lineWidth + 3.5} strokeLinecap="round" strokeLinejoin="round" fill="none" opacity={0.6} />
         <Path d={g.line} stroke={LINE} strokeWidth={g.lineWidth} strokeLinecap="round" strokeLinejoin="round" fill="none" />
         <Circle cx={g.rider.x} cy={g.rider.y} r={g.riderRadius} fill={LINE} stroke="#000" strokeWidth={2} />
+        </>
+      ) : null}
+      {/* Zuziehende Kurve: Warnstreifen quer über die Straße am engsten Teil (Kurvenende) und Beschriftung */}
+      {curve.shape === 'tightening' ? (
+        <>
+          <Line x1={g.end.x - w / 2} x2={g.end.x + w / 2} y1={g.end.y} y2={g.end.y} stroke={colors.warn} strokeWidth={6} strokeDasharray="8 5" />
+          <SvgText x={width / 2} y={height - 8} fill={colors.warn} fontSize={22} fontWeight="800" textAnchor="middle">
+            {`» ${f.shape('tightening')} «`}
+          </SvgText>
         </>
       ) : null}
       <SvgText x={g.numberAnchor.x} y={g.numberAnchor.y} fill={color} fontSize={96} fontWeight="900" textAnchor="middle">

@@ -23,6 +23,19 @@ export interface CurveConfig {
   /** Relative Krümmungsänderung ab der eine Kurve zugeht/aufgeht */
   shapeRatio: number;
   /**
+   * Lage des engsten Punkts (Anteil der Kurvenlänge ab Anfang): „zieht zu" gilt nur, wenn er ab diesem Anteil
+   * liegt, „öffnet" nur, wenn er höchstens bei 1 − diesem Anteil liegt. Liegt er dazwischen, gibt es keinen
+   * einseitigen Trend (Schätzwert).
+   */
+  shapePeakFraction: number;
+  /**
+   * Zieht die Kurve so stark zu (Krümmung am Ende ÷ am Anfang), wird sie vom Ansagefilter („ab Stufe") nicht
+   * unterdrückt – Schätzwert.
+   */
+  strongTighteningRatio: number;
+  /** Nur Kurven bis zu dieser Stufe profitieren davon (sehr leichte Bögen bleiben filterbar) */
+  strongTighteningMaxGrade: number;
+  /**
    * Sicherheitsabschlag: der gemessene Radius wird vor der Einstufung damit multipliziert (<1 = Grenzkurven
    * eher eine Stufe enger). Solange nichts kalibriert ist, lieber zu streng als zu mild.
    */
@@ -63,6 +76,9 @@ export const DEFAULT_CURVE_CONFIG: CurveConfig = {
   geometryMarginM: 50,
   shapeFraction: 0.33,
   shapeRatio: 1.25,
+  shapePeakFraction: 0.6,
+  strongTighteningRatio: 2,
+  strongTighteningMaxGrade: 5,
   // 0,85 statt zuvor 0,9: gemessen auf Stelvio/Amalfi (siehe README), Schätzwert, nicht an echten Fahrten kalibriert
   safetyMarginRadiusFactor: 0.85,
   // Stufe 1 = Spitzkehre … 6 = sehr leicht

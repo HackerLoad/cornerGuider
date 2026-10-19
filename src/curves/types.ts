@@ -17,6 +17,8 @@ export interface Curve {
   totalAngle: number;
   direction: Direction;
   shape: Shape;
+  /** Mittlere Krümmung im letzten ÷ im ersten Drittel (> 1 = zieht zu, < 1 = öffnet), auf 0,1–10 begrenzt */
+  curvatureChange: number;
   /** Angesagte/angezeigte Stufe: `measuredGrade`, bei niedriger Konfidenz um eins enger */
   grade: Grade;
   /** Stufe allein aus dem Radius (mit Sicherheitsabschlag), ohne Abzug für unsichere Geometrie */

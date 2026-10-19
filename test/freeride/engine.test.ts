@@ -222,3 +222,29 @@ describe('FreeAnnouncer: Filter für leichte Kurven', () => {
     expect(filtered[1]).toMatch(/Links 3/);
   });
 });
+
+describe('FreeAnnouncer: deutlich zuziehende Kurve umgeht den Filter', () => {
+  const spiral = new TrackBuilder().straight(300).arc('right', 160, 25).arc('right', 110, 25).arc('right', 75, 25).arc('right', 50, 25).straight(500);
+  const constant = new TrackBuilder().straight(300).arc('right', 50, 100).straight(500);
+
+  function texts(track: TrackBuilder, minAnnounceGrade: number) {
+    const graph = roadOf(track);
+    const xy = track.xy();
+    const engine = new FreerideEngine(graph);
+    const ann = new FreeAnnouncer({ ...DEFAULT_ANNOUNCE_SETTINGS, minAnnounceGrade });
+    const out: string[] = [];
+    for (let i = 20; i < xy.length - 20; i += 15) {
+      const st = engine.update(fixAt(xy[i]!, bearing(xy[i - 1]!, xy[i + 1]!), 15, i * 1000));
+      const a = ann.next(st.upcoming, 15, st.status === 'ok');
+      if (a) out.push(a.text);
+    }
+    return out;
+  }
+
+  it('Stufe 3 bei Filter ab 2: zuziehend wird angesagt, konstant nicht', () => {
+    const sp = texts(spiral, 2);
+    expect(sp).toHaveLength(1);
+    expect(sp[0]).toContain('zieht zu');
+    expect(texts(constant, 2)).toHaveLength(0);
+  });
+});
