@@ -1,4 +1,5 @@
 import { HINT_MIN_RATINGS, curveKey, distanceAtTime, exportBundle, ratedCurves, recordingToGpx, summarizeRatings, type FeedbackMark } from '../src/feedback/model';
+import { parseRecording } from '../src/freeride/recordingFormat';
 import type { FreerideRecording } from '../src/freeride/session';
 import { makeProjection } from '../src/geo/projection';
 
@@ -6,7 +7,8 @@ const origin = { lat: 47, lon: 11 };
 const proj = makeProjection(origin);
 const fix = (t: number, y: number) => ({ t, ...proj.toLatLon({ x: 0, y }), speed: 15 });
 
-const rec: FreerideRecording = {
+// Gespeichert im alten Format 1; parseRecording hebt es auf das aktuelle Schema
+const rec: FreerideRecording = parseRecording({
   version: 1,
   id: 'x',
   startedAt: 1000,
@@ -19,7 +21,7 @@ const rec: FreerideRecording = {
   ],
   stats: { steps: 5, ok: 5, uncertain: 0, noRoad: 0, loading: 0, endReasons: {} },
   ratings: { [curveKey(2500, 1)]: 'tooMild' },
-};
+})!;
 
 describe('Bewertungen', () => {
   it('listet angesagte Kurven in Fahrtreihenfolge mit ihrer Bewertung', () => {

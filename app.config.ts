@@ -90,6 +90,14 @@ const config: ExpoConfig = {
       },
     ],
     'expo-dev-client',
+    [
+      'expo-sensors',
+      {
+        // Bewegungssensor für die Schräglage-Aufzeichnung (Kalibrierung); die Daten bleiben auf dem Gerät
+        motionPermission:
+          'cornerGuider nutzt die Bewegungssensoren, um die Schräglage für die Kalibrierung aufzuzeichnen. Die Daten bleiben auf dem Gerät.',
+      },
+    ],
     './plugins/withLiveActivityFrequentUpdates',
     'expo-live-activity',
     [

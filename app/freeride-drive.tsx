@@ -15,6 +15,7 @@ import { useFormat } from '../src/i18n';
 import { configureAudioSession } from '../src/services/audioSession';
 import { DeviceLocationSource } from '../src/services/deviceLocation';
 import { saveRecording } from '../src/services/freerideStorage';
+import { createLeanSource } from '../src/services/leanSensor';
 import { createTileLoader } from '../src/services/roadData';
 import { loadRoute } from '../src/services/routeStorage';
 import { liveInputFromFreeride } from '../src/liveActivity/mappers';
@@ -93,7 +94,9 @@ export default function FreerideDrive() {
           source = new DeviceLocationSource();
         }
         const loader = createTileLoader();
-        s = new FreerideSession({ source, speak: (t) => speakWithSettings(t), getSettings: currentDriveSettings, loadTile: (tile) => loader.load(tile).then((r) => r.ways) });
+        // Schräglage (Kalibrierdaten) nur auf einer echten Fahrt; in der Simulation liegt das Handy still
+        const lean = simRouteId ? undefined : createLeanSource();
+        s = new FreerideSession({ source, speak: (t) => speakWithSettings(t), getSettings: currentDriveSettings, loadTile: (tile) => loader.load(tile).then((r) => r.ways), lean });
         if (cancelled) return;
         setSession(s);
         unsub = s.subscribe(setSnap);

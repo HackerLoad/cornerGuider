@@ -7,6 +7,8 @@ import { parseOverpass } from '../../src/freeride/overpassClient';
 import { FreerideSession } from '../../src/freeride/session';
 import { parseGpx } from '../../src/gpx/parseGpx';
 import { makeProjection } from '../../src/geo/projection';
+import { calibrate, formatCalibration } from '../../src/freeride/calibration';
+import { parseRecording } from '../../src/freeride/recordingFormat';
 import { DEFAULT_DRIVE_SETTINGS } from '../../src/settings';
 
 const fx = (n: string) => readFileSync(join(__dirname, '../fixtures', n), 'utf8');
@@ -108,6 +110,74 @@ describe('FreerideSession', () => {
     for (let i = 0; i < 150; i++) await step();
     await sim.stop();
     expect(loadTile.mock.calls.length).toBeGreaterThan(1);
+  });
+});
+
+describe('Aufzeichnung für die Kalibrierung', () => {
+  it('speichert Genauigkeit, gefahrenen Radius, rechnerische und gemessene Schräglage', async () => {
+    // Sensor-Attrappe: aufrecht im Stand, danach 20° geneigt
+    let g: [number, number, number] = [0, 0, -1];
+    const a = (20 * Math.PI) / 180;
+    const lean = { start: async () => true, stop: async () => undefined, latest: () => g };
+    const clock = { t: 1_000_000 };
+    const sim = new SimulatedLocationSource(route, { speedKmh: 54, startDist: 60, now: () => clock.t });
+    const session = new FreerideSession({
+      source: sim,
+      speak: () => undefined,
+      getSettings: () => DEFAULT_DRIVE_SETTINGS,
+      loadTile: (async () => ways) as never,
+      now: () => clock.t,
+      lean,
+    });
+    const step = async () => {
+      clock.t += 1000;
+      sim.tick(1000);
+      await flush();
+    };
+    sim.setPaused(true);
+    await session.start();
+    await flush();
+    for (let i = 0; i < 5; i++) await step(); // Stand: Nullpunkt
+    sim.setPaused(false);
+    g = [0, Math.sin(a), -Math.cos(a)];
+    for (let i = 0; i < 150; i++) await step();
+    await sim.stop();
+    await session.stop();
+
+    const rec = session.getRecording()!;
+    expect(rec.schemaVersion).toBe(2);
+    expect(rec.lean.sensor).toBe(true);
+    expect(rec.lean.zero).not.toBeNull();
+    expect(rec.lean.zeroAt).not.toBeNull();
+    expect(rec.fixes.every((f) => f.accuracy === 5)).toBe(true);
+    expect(rec.fixes.some((f) => f.radiusM !== null && f.radiusM > 5 && f.radiusM < 1000)).toBe(true);
+    expect(rec.fixes.some((f) => (f.leanCalcDeg ?? 0) > 5)).toBe(true);
+    expect(rec.fixes.filter((f) => f.tiltDeg !== null).length).toBeGreaterThan(100);
+    expect(rec.fixes.at(-1)!.tiltDeg).toBeCloseTo(20, 0);
+    expect(rec.fixes.at(-1)!.gravity).not.toBeNull();
+    // angesagte Kurven tragen Radius, Form und Konfidenz
+    const c = rec.announcements[0]!.curves[0]!;
+    expect(c.minRadius).toBeGreaterThan(0);
+    expect(['tightening', 'opening', 'constant']).toContain(c.shape);
+    expect(c.confidence).toBeGreaterThan(0);
+    // das Format übersteht Speichern und Laden unverändert
+    expect(parseRecording(JSON.parse(JSON.stringify(rec)))).toEqual(rec);
+  });
+
+  it('ohne Sensor: Messwerte leer, aber GPS-Werte und rechnerische Schräglage vorhanden; Auswertung läuft durch', async () => {
+    const { session, step, sim } = setup(async () => ways);
+    await session.start();
+    await flush();
+    for (let i = 0; i < 150; i++) await step();
+    await sim.stop();
+    const rec = session.getRecording()!;
+    expect(rec.lean).toEqual({ sensor: false, zero: null, zeroAt: null });
+    expect(rec.fixes.every((f) => f.tiltDeg === null && f.gravity === null)).toBe(true);
+    expect(rec.fixes.some((f) => (f.leanCalcDeg ?? 0) > 5)).toBe(true);
+    const { rows, summary } = calibrate(rec);
+    expect(rows.length).toBeGreaterThan(5);
+    expect(summary.sensor).toBe(false);
+    expect(formatCalibration({ rows, summary })).toContain('nur rechnerisch');
   });
 });
 

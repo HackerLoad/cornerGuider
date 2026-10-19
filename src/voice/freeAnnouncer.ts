@@ -4,12 +4,13 @@ import { dist } from '../geo/polyline';
 import type { XY } from '../geo/types';
 import type { UpcomingCurve } from '../tracking/nextCurves';
 import { DEFAULT_ANNOUNCE_SETTINGS, leadDistance, type AnnounceSettings } from './announceScheduler';
+import type { RecordedCurve } from '../freeride/recordingFormat';
 import { announcementText } from './phrases';
 
 export interface FreeAnnouncement {
   text: string;
   /** Alle in dieser Ansage genannten Kurven (die erste und die direkt folgenden), mit Anfang in lokalen Metern */
-  curves: { start: XY; grade: number; direction: 'left' | 'right' }[];
+  curves: RecordedCurve[];
 }
 
 /**
@@ -59,7 +60,14 @@ export class FreeAnnouncer {
       this.announced.push(u.curve.startXY, ...followUps.map((f) => f.curve.startXY));
       return {
         text: announcementText(u.curve, u.distanceTo, followUps.map((f) => f.curve), this.settings.phrase),
-        curves: [u, ...followUps].map((x) => ({ start: x.curve.startXY, grade: x.curve.grade, direction: x.curve.direction })),
+        curves: [u, ...followUps].map((x) => ({
+          start: x.curve.startXY,
+          grade: x.curve.grade,
+          direction: x.curve.direction,
+          minRadius: Math.round(x.curve.minRadius * 10) / 10,
+          shape: x.curve.shape,
+          confidence: Math.round(x.curve.confidence * 100) / 100,
+        })),
       };
     }
     return null;

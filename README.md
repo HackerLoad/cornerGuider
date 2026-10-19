@@ -46,6 +46,7 @@ Stand der Review-Runde 2026-10 (siehe `docs/review-2026-10.md`). Wird nach jeder
 - Kurvengrafik-Layout, Dateiimport, Tabs/Einstellungen und Live-Aktivität auf einem Gerät: ungesehen.
 - Freie Fahrt mit echtem Fahrzeug-GPS: nur eine kurze Autofahrt.
 - Store-Builds über EAS: nicht ausgelöst.
+- Aufzeichnung für die Kalibrierung (A4): Das Format, `npm run calibrate` und die Berechnung laufen nur gegen Simulation und synthetische Fahrten. Der Bewegungssensor (`expo-sensors`, Plugin in `app.config.ts`) wurde auf keinem Gerät gelesen; ob er in der Tasche/am Lenker, bei gesperrtem Display und im Hintergrund liefert, ob iOS eine Bewegungsabfrage zeigt und wie gut die Neigung aus der Schwerkraftrichtung zur echten Schräglage passt, ist ungeprüft. Für das Plugin ist ein `npx expo prebuild --clean` nötig. Aufzeichnungen lassen sich in der App nicht einzeln löschen (siehe Datenschutzentwurf).
 - „Zieht zu" / „öffnet" (A3): Schwellwerte (`shapeRatio`, `shapePeakFraction`, `strongTighteningRatio`) sind geschätzt. Stichprobe von 5 Stelvio-Kurven nur per Rechnung am GPX-Track geprüft, nicht gefahren. Die Markierung in der Kurvengrafik wurde auf keinem Gerät gesehen.
 - Sicherheitsabschlag (A2): 0,85 ist ein Schätzwert aus drei probierten Werten (0,9 / 0,85 / 0,8 / 0,75), nicht kalibriert. Ob die strengeren Stufen zu echten Kurven auf dem Motorrad passen, ist ungeprüft.
 - Konfidenz (A1): Schwellwerte in `src/curves/config.ts` sind geschätzt. Die gestrichelte Darstellung unsicherer Kurven und die Ansagen „Kurve, unsicher" / „Keine Vorschau" wurden nicht auf einem Gerät gesehen oder gehört. Die Live-Aktivität zeigt für unsichere Kurven weiterhin die Stufe (bewusst nicht angefasst, siehe Feature-Stopp).
@@ -207,6 +208,7 @@ src/
   stores/                Zustand: Routenindex, Einstellungen (persistiert)
   components/            Kurvengrafik, Kurvenzeile, Sicherheitshinweis
 scripts/curves-cli.ts    Kurvenliste einer GPX-Datei auf der Konsole
+scripts/calibrate-cli.ts Auswertung einer Aufzeichnung (npm run calibrate, siehe docs/recording-format.md)
 test/                    Jest-Tests, GPX-Fixtures unter test/fixtures
 ```
 

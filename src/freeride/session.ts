@@ -2,17 +2,29 @@ import type { LocationSource } from '../drive/locationSource';
 import { dist } from '../geo/polyline';
 import type { LatLon, XY } from '../geo/types';
 import type { DriveSettings } from '../settings';
-import { buildMark, type CurveRating, type FeedbackMark, type MarkKind } from '../feedback/model';
+import { buildMark, type FeedbackMark, type MarkKind } from '../feedback/model';
+import { DrivenRadius } from '../tracking/drivenRadius';
+import { LeanTracker, calcLeanDeg, type LeanSource } from '../tracking/leanAngle';
 import type { Fix } from '../tracking/routeTracker';
 import { announceSettingsFrom, leadDistance } from '../voice/announceScheduler';
 import { systemPhrase } from '../voice/phrases';
 import { FreeAnnouncer } from '../voice/freeAnnouncer';
 import { FreerideEngine, type FreerideState } from './engine';
+import {
+  RECORDING_SCHEMA_VERSION,
+  type FreerideRecording,
+  type FreerideStats,
+  type LeanHeader,
+  type RecordedAnnouncement,
+  type RecordedFix,
+} from './recordingFormat';
 import { PreviewMonitor } from './previewMonitor';
 import { fetchOverpass } from './overpassClient';
 import { buildTileQuery, tileKey, tilesNear, type Tile } from './tiles';
 import { RoadGraph } from './roadGraph';
 import type { OsmWay } from './types';
+
+export type { FreerideRecording, FreerideStats, RecordedAnnouncement, RecordedFix } from './recordingFormat';
 
 export type DataStatus = 'loading' | 'ready' | 'error';
 
@@ -29,48 +41,12 @@ export interface FreerideSnapshot extends FreerideState {
   previewLost: boolean;
 }
 
-export interface RecordedFix {
-  t: number;
-  lat: number;
-  lon: number;
-  speed: number | null;
-}
-
-export interface RecordedAnnouncement {
-  t: number;
-  text: string;
-  curves: { start: XY; grade: number; direction: 'left' | 'right' }[];
-}
-
-export interface FreerideStats {
-  steps: number;
-  ok: number;
-  uncertain: number;
-  noRoad: number;
-  loading: number;
-  /** Wie der vorhergesagte Pfad endete (nur Schritte mit Straße) */
-  endReasons: Record<string, number>;
-}
-
-/** Aufzeichnung einer Fahrt für die spätere Auswertung. */
-export interface FreerideRecording {
-  version: 1;
-  id: string;
-  startedAt: number;
-  endedAt: number;
-  /** Ursprung der lokalen Meter, in denen `announcements` angegeben sind */
-  origin: LatLon;
-  fixes: RecordedFix[];
-  announcements: RecordedAnnouncement[];
-  stats: FreerideStats;
-  /** Bewertungen der angesagten Kurven nach der Fahrt (Schlüssel siehe feedback/model.ts) */
-  ratings?: Record<string, CurveRating>;
-}
-
 export interface FreerideSessionOptions {
   source: LocationSource;
   speak: (text: string) => void;
   getSettings: () => DriveSettings;
+  /** Bewegungssensor für die Schräglage (Kalibrierdaten); ohne ihn bleiben die Sensorwerte leer */
+  lean?: LeanSource;
   /** Straßendaten einer Kachel holen (Speicher und Netz); Standard: direkt von Overpass */
   loadTile?: (tile: Tile) => Promise<OsmWay[]>;
   now?: () => number;
@@ -118,6 +94,10 @@ export class FreerideSession {
   private startedAt = 0;
   private readonly fixes: RecordedFix[] = [];
   private readonly announcements: RecordedAnnouncement[] = [];
+  private readonly leanTracker = new LeanTracker();
+  private readonly drivenRadius = new DrivenRadius();
+  private leanSensor = false;
+  private zeroAt: number | null = null;
   private readonly stats: FreerideStats = { steps: 0, ok: 0, uncertain: 0, noRoad: 0, loading: 0, endReasons: {} };
 
   snapshot: FreerideSnapshot = initialSnapshot({ x: 0, y: 0 });
@@ -135,12 +115,14 @@ export class FreerideSession {
   async start(): Promise<void> {
     this.running = true;
     this.startedAt = this.now();
+    this.leanSensor = (await this.o.lean?.start().catch(() => false)) ?? false;
     await this.o.source.start((fix) => this.onFix(fix));
   }
 
   async stop(): Promise<void> {
     this.running = false;
     await this.o.source.stop();
+    await Promise.resolve(this.o.lean?.stop()).catch(() => undefined);
   }
 
   /** Markierung (falsch / fehlt) an der letzten Position; null, solange noch kein GPS vorliegt. */
@@ -154,8 +136,9 @@ export class FreerideSession {
 
   getRecording(): FreerideRecording | null {
     if (!this.graph) return null;
+    const lean: LeanHeader = { sensor: this.leanSensor, zero: this.leanTracker.zero, zeroAt: this.zeroAt };
     return {
-      version: 1,
+      schemaVersion: RECORDING_SCHEMA_VERSION,
       id: `${this.startedAt.toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
       startedAt: this.startedAt,
       endedAt: this.now(),
@@ -163,6 +146,7 @@ export class FreerideSession {
       fixes: this.fixes,
       announcements: this.announcements,
       stats: this.stats,
+      lean,
     };
   }
 
@@ -176,7 +160,7 @@ export class FreerideSession {
     const engine = this.engine!;
     this.lastFix = fix;
     const t = this.now();
-    this.fixes.push({ t, lat: fix.lat, lon: fix.lon, speed: fix.speed });
+    this.fixes.push(this.recordFix(t, fix, graph.projection.toXY(fix)));
 
     this.maybeLoad(fix, graph);
     const state = engine.update(fix);
@@ -210,6 +194,27 @@ export class FreerideSession {
     if (state.endReason) this.stats.endReasons[state.endReason] = (this.stats.endReasons[state.endReason] ?? 0) + 1;
 
     this.emit({ ...state, data, dataError: this.dataError, dataErrorRaw: this.dataErrorRaw, lastSpoken: this.lastSpoken, speed: fix.speed ?? 0, previewLost: this.preview.lost });
+  }
+
+  /** Messpunkt für die Aufzeichnung: Position, GPS-Werte, gefahrener Radius, Schräglage (rechnerisch und gemessen). */
+  private recordFix(t: number, fix: Fix, xy: XY): RecordedFix {
+    const radius = this.drivenRadius.push(xy);
+    const hadZero = this.leanTracker.zero !== null;
+    const lean = this.leanTracker.update(this.leanSensor ? (this.o.lean?.latest() ?? null) : null, fix.speed);
+    if (!hadZero && this.leanTracker.zero) this.zeroAt = t;
+    const r1 = (x: number) => Math.round(x * 10) / 10;
+    return {
+      t,
+      lat: fix.lat,
+      lon: fix.lon,
+      speed: fix.speed,
+      accuracy: fix.accuracy,
+      heading: fix.heading ?? null,
+      radiusM: radius === null ? null : r1(radius),
+      leanCalcDeg: fix.speed === null ? null : r1(calcLeanDeg(fix.speed, radius)),
+      gravity: lean.gravity ? (lean.gravity.map((c) => Math.round(c * 1000) / 1000) as [number, number, number]) : null,
+      tiltDeg: lean.tiltDeg === null ? null : r1(lean.tiltDeg),
+    };
   }
 
   private emit(s: FreerideSnapshot): void {

@@ -1,5 +1,6 @@
 import { Directory, File, Paths } from 'expo-file-system';
 import type { FreerideRecording } from '../freeride/session';
+import { parseRecording } from '../freeride/recordingFormat';
 
 const dir = () => new Directory(Paths.document, 'freeride');
 const fileFor = (id: string) => new File(dir(), `${id}.json`);
@@ -21,8 +22,7 @@ export async function loadRecording(id: string): Promise<FreerideRecording | nul
   const f = fileFor(id);
   if (!f.exists) return null;
   try {
-    const rec = JSON.parse(await f.text()) as FreerideRecording;
-    return rec.version === 1 ? rec : null;
+    return parseRecording(JSON.parse(await f.text()));
   } catch {
     return null;
   }

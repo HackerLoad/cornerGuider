@@ -15,7 +15,8 @@ cornerGuider hat kein Benutzerkonto, keine Werbung und kein Tracking. Streckenda
 | **Standort** (GPS, auch im Hintergrund) | Kurven auf deiner Strecke ansagen und anzeigen | nur auf dem Gerät | keine, außer bei der Freien Fahrt |
 | **GPX-Dateien** und berechnete Kurven | Strecken speichern | nur auf dem Gerät | keine |
 | **Einstellungen** | Ansagen, Anzeige, Einheiten | nur auf dem Gerät | keine |
-| **Aufzeichnungen der Freien Fahrt** (Positionen, Ansagen) | Auswertung der Fahrt | nur auf dem Gerät | keine |
+| **Aufzeichnungen der Freien Fahrt** (Positionen mit Zeit, Geschwindigkeit, GPS-Genauigkeit, Ansagen) | Auswertung der Fahrt | nur auf dem Gerät | keine, außer durch deinen Export (siehe unten) |
+| **Bewegungssensor** (Schwerkraftrichtung des Handys, daraus die Neigung) | Schräglage der Fahrt für die Verbesserung der Kurvenstufen aufzeichnen | nur auf dem Gerät, Teil der Aufzeichnung | keine, außer durch deinen Export |
 
 ## Freie Fahrt: Abruf von Straßendaten
 
@@ -23,15 +24,26 @@ Für die Freie Fahrt lädt die App Straßendaten von **OpenStreetMap** über öf
 
 Die Freie Fahrt wird nur gestartet, wenn du sie selbst auswählst. Bei Fahrten mit geplanter Strecke werden keine Positionsdaten übertragen.
 
+## Aufzeichnung und Export (Entwurf, neu)
+
+> Entwurf: Dieser Abschnitt beschreibt die geplante Aufzeichnung für die Kalibrierung und ist noch nicht geprüft.
+
+- Bei der Freien Fahrt speichert die App für jede Fahrt eine Aufzeichnung: Positionen mit Zeitstempel, GPS-Geschwindigkeit und -Genauigkeit, den berechneten Kurvenradius, die rechnerische Schräglage und, falls das Gerät einen Bewegungssensor hat, die Richtung der Schwerkraft und die daraus berechnete Neigung. Dazu die angesagten Kurven und deine Bewertungen.
+- Die Aufzeichnung bleibt auf deinem Gerät. Die App sendet sie nicht an uns oder Dritte und wertet sie nicht selbst aus.
+- Ein Export (GPX oder JSON) findet **nur statt, wenn du ihn selbst in der Ergebnisansicht der Fahrt auslöst**. Wohin du die Datei teilst, entscheidest du. Die Aufzeichnung enthält deine gefahrene Strecke mit Uhrzeiten und lässt Rückschlüsse auf Wohnort und Gewohnheiten zu; teile sie nur mit Personen, denen du vertraust.
+- **Offen:** Die App hat derzeit keine Funktion, einzelne Aufzeichnungen zu löschen (`deleteRecording` existiert im Code, ist aber in keiner Ansicht eingebunden). Aktuell sind alle Aufzeichnungen erst mit dem Löschen der App entfernt. Vor einem Release entweder eine Löschfunktion ergänzen oder diesen Text so lassen.
+- Der Bewegungssensor wird nur während einer Freien Fahrt gelesen.
+
 ## Berechtigungen
 
 - **Standort „immer"**: damit die Ansagen auch bei gesperrtem Display und im Hintergrund weiterlaufen. Du kannst den Zugriff jederzeit in den Systemeinstellungen ändern.
+- **Bewegung (Bewegungssensor)**: damit die Neigung des Handys während der Freien Fahrt aufgezeichnet werden kann. Auf iOS steht dafür ein Nutzungstext in der App; die Abfrage ist nicht nötig, wenn nur der Beschleunigungssensor gelesen wird. Ob und wann das System fragt, ist nicht geprüft.
 - **Datei-Zugriff** nur für die GPX-Dateien, die du selbst auswählst oder teilst.
 - **Live-Aktivität (iOS)**: zeigt die nächste Kurve auf dem Sperrbildschirm; die Daten verlassen das Gerät nicht.
 
 ## Speicherdauer und Löschen
 
-Alle Daten liegen lokal. Strecken und Aufzeichnungen kannst du in der App löschen; mit dem Löschen der App werden alle Daten entfernt.
+Alle Daten liegen lokal. Strecken kannst du in der App löschen. Einzelne Aufzeichnungen der Freien Fahrt lassen sich derzeit nicht in der App löschen (siehe Abschnitt „Aufzeichnung und Export"); mit dem Löschen der App werden alle Daten entfernt.
 
 ## Deine Rechte
 
